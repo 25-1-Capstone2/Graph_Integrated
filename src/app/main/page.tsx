@@ -5,15 +5,9 @@ import supabase from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
-import FinancialTable from './Financial'
+import FinancialTable from './Financial' // ⬅️ 실제는 MarketSummary 역할
 import Company from './Company'
-import StockComp from '@/app/components/StockComp' // 해당 컴포넌트 없으면 임시 컴포넌트 만들어도 OK
-
-type Statement = {
-  year: number
-  item: string
-  amount: number
-}
+import StockComp from '@/app/components/StockComp'
 
 type CompanyType = {
   code: string
@@ -23,9 +17,8 @@ type CompanyType = {
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
-  const [data, setData] = useState<Statement[]>([])
   const [company, setCompany] = useState<CompanyType[]>([])
-  const [selectedMenu, setSelectedMenu] = useState('dashboard') // 👈 선택 메뉴 상태
+  const [selectedMenu, setSelectedMenu] = useState('dashboard')
   const router = useRouter()
 
   useEffect(() => {
@@ -44,19 +37,12 @@ const Home = () => {
   useEffect(() => {
     if (!user || selectedMenu !== 'dashboard') return
 
-    const fetchFinancials = async () => {
-      const res = await fetch('/api/financials')
-      const json = await res.json()
-      setData(json.data || [])
-    }
-
     const fetchCompany = async () => {
       const res = await fetch('/api/company')
       const json = await res.json()
       setCompany(json.data || [])
     }
 
-    fetchFinancials()
     fetchCompany()
   }, [user, selectedMenu])
 
@@ -64,7 +50,7 @@ const Home = () => {
 
   return (
     <div style={{ display: 'flex' }}>
-      <Sidebar onSelect={setSelectedMenu} /> {/* 메뉴 선택 시 setSelectedMenu 호출 */}
+      <Sidebar onSelect={setSelectedMenu} />
       <div style={{ flex: 1 }}>
         <Header userEmail={user.email} />
 
@@ -72,10 +58,10 @@ const Home = () => {
           {selectedMenu === 'dashboard' && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
               <div style={{ flex: 1 }}>
-                <Company data={company} />
+                <Company />
               </div>
               <div style={{ flex: 2 }}>
-                <FinancialTable data={data} />
+                <FinancialTable /> {/* MarketSummary 역할 */}
               </div>
             </div>
           )}

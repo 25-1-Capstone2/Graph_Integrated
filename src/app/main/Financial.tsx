@@ -1,35 +1,49 @@
-type FinancialStatement = {
-  item: string
-  amount: number | null
-  year: number
+'use client'
+
+import { useEffect, useState } from 'react'
+
+type MarketItem = {
+  name: string
+  value: string
+  change: string
 }
 
-export default function FinancialTable({ data }: { data: FinancialStatement[] }) {
+export default function MarketSummary() {
+  const [market, setMarket] = useState<MarketItem[]>([])
+
+  useEffect(() => {
+    const fetchMarket = async () => {
+      const res = await fetch('/api/financials')
+      const json = await res.json()
+      setMarket(json)
+    }
+
+    fetchMarket()
+    const interval = setInterval(fetchMarket, 15000) // 15초마다 갱신
+    return () => clearInterval(interval)
+  }, [])
+
   return (
-    <div style={{ padding: '2rem' }}>
-      <h2>📊 이월드 (084680) 재무제표</h2>
-      <table>
-        <thead>
-          <tr>
-            <th>연도</th>
-            <th>항목</th>
-            <th>금액</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.map((row, i) => (
-            <tr key={i}>
-              <td>{row.year}</td>
-              <td>{row.item}</td>
-              <td>
-                {row.amount != null
-                  ? row.amount.toLocaleString() + ' 원'
-                  : '-'}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">시장 지수 요약</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {market.map((item, i) => (
+          <div
+            key={i}
+            className="border rounded-lg p-4 shadow-sm bg-white hover:bg-gray-50 transition"
+          >
+            <p className="text-sm text-gray-500">{item.name}</p>
+            <p className="text-xl font-bold text-gray-900">{item.value}</p>
+            <p
+              className={`text-sm font-medium ${
+                item.change.startsWith('+') ? 'text-green-500' : 'text-red-500'
+              }`}
+            >
+              {item.change}
+            </p>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }

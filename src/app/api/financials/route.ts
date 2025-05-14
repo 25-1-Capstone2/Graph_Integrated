@@ -1,39 +1,29 @@
-export const runtime = 'nodejs'  // ← 로그 찍히게 전환
-
-import { NextResponse } from 'next/server'
-import neo4j from 'neo4j-driver'
-
-const uri = process.env.NEO4J_URI!
-const user = process.env.NEO4J_USERNAME!
-const password = process.env.NEO4J_PASSWORD!
-
-const driver = neo4j.driver(uri, neo4j.auth.basic(user, password))
+import axios from 'axios'
+import * as cheerio from 'cheerio'
+import iconv from 'iconv-lite'
 
 export async function GET() {
-  console.log('🔥 Financial API 진입')
-
-  const session = driver.session()
   try {
-    const result = await session.run(`
-      MATCH (s:FinancialStatement {company: "084680"})
-      RETURN s.item AS item, s.amount AS amount, s.year AS year
-      ORDER BY s.year ASC, s.item ASC
-    `)
+    const res = await axios.get('https://finance.naver.com/sise/', {
+      responseType: 'arraybuffer', // 중요
+    })
 
-    const data = result.records.map(r => ({
-      item: r.get('item'),
-      amount: typeof r.get('amount') === 'object' && r.get('amount')?.toNumber
-      ? r.get('amount')?.toNumber()
-      : parseFloat(r.get('amount')),
+    const decoded = iconv.decode(res.data, 'EUC-KR') // 한글 디코딩
+    const $ = cheerio.load(decoded)
 
-      year: r.get('year')?.toNumber?.()
-    }))
+    const kospi = $('#KOSPI_now').text().trim()
+    const kospiChange = $('#KOSPI_change').text().trim()
+    const kosdaq = $('#KOSDAQ_now').text().trim()
+    const kosdaqChange = $('#KOSDAQ_change').text().trim()
 
-    return NextResponse.json({ data })
+    const items = [
+      { name: '코스피', value: kospi, change: kospiChange },
+      { name: '코스닥', value: kosdaq, change: kosdaqChange },
+    ]
+
+    return Response.json(items)
   } catch (err) {
-    console.error('❌ FinancialStatement Query Error:', err)
-    return NextResponse.json({ error: 'Query failed' }, { status: 500 })
-  } finally {
-    await session.close()
+    console.error('네이버 크롤링 실패:', err)
+    return Response.json({ error: '크롤링 실패' }, { status: 500 })
   }
 }
