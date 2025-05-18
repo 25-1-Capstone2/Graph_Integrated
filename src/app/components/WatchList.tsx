@@ -43,10 +43,28 @@ export default function WatchList({ onSelect }: WatchListProps) {
     }
   }
 
+  const deleteStock = async (id: number) => {
+    try {
+      const { error } = await supabase
+        .from('interests')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      setStocks(prev => prev.filter(stock => stock.id !== id))
+    } catch (error) {
+      console.error('삭제 실패:', error)
+      alert('종목 삭제에 실패했습니다.')
+    }
+  }
+
   return (
     <div
       style={{
-        border: '1px solid #ccc',
+        borderWidth: '1px',
+        borderStyle: 'solid',
+        borderColor: '#ccc',
         borderRadius: '8px',
         padding: '16px',
         backgroundColor: '#fff',
@@ -66,12 +84,21 @@ export default function WatchList({ onSelect }: WatchListProps) {
             padding: '8px',
             marginRight: '8px',
             borderRadius: '4px',
-            border: '1px solid #ccc',
+            borderWidth: '1px',
+            borderStyle: 'solid',
+            borderColor: '#ccc',
           }}
         />
         <button
           onClick={addStock}
-          style={{ padding: '8px 12px', borderRadius: '4px', border: 'none' }}
+          style={{
+            padding: '8px 12px',
+            borderRadius: '4px',
+            border: 'none',
+            backgroundColor: '#0070f3',
+            color: '#fff',
+            cursor: 'pointer',
+          }}
         >
           create
         </button>
@@ -80,25 +107,43 @@ export default function WatchList({ onSelect }: WatchListProps) {
       <ul style={{ listStyleType: 'none', padding: 0, margin: 0 }}>
         {stocks.map(stock => (
           <li key={stock.id} style={{ marginBottom: '12px' }}>
-            <button
-              onClick={() => onSelect(stock.name)} // ✅ 이 부분에서 전달
-              style={{
-                display: 'block',
-                padding: '12px',
-                width: '100%',
-                border: '1px solid #ccc',
-                borderRadius: '4px',
-                textAlign: 'left',
-                background: '#f9f9f9',
-                color: '#333',
-                cursor: 'pointer',
-              }}
-            >
-              {stock.name}
-            </button>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <button
+                onClick={() => onSelect(stock.name)}
+                style={{
+                  flex: 1,
+                  padding: '12px',
+                  borderWidth: '1px',
+                  borderStyle: 'solid',
+                  borderColor: '#ccc',
+                  borderRadius: '4px',
+                  textAlign: 'left',
+                  background: '#f9f9f9',
+                  color: '#333',
+                  cursor: 'pointer',
+                }}
+              >
+                {stock.name}
+              </button>
+              <button
+                onClick={() => deleteStock(stock.id)}
+                style={{
+                  width: '40px',
+                  height: '48px',
+                  backgroundColor: 'lightgray',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                }}
+              >
+                ✕
+              </button>
+            </div>
           </li>
         ))}
       </ul>
     </div>
   )
 }
+
