@@ -5,8 +5,9 @@ import supabase from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
-import FinancialTable from './Financial' // ⬅️ 실제는 MarketSummary 역할
 import Company from './Company'
+import FinancialTable from './Financial' // 기존 MarketSummary 역할
+import Financial from './Financials'     // 분리한 시세 테이블 컴포넌트
 
 type CompanyType = {
   code: string
@@ -18,6 +19,7 @@ const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<CompanyType[]>([])
   const [selectedMenu, setSelectedMenu] = useState('dashboard')
+
   const router = useRouter()
 
   useEffect(() => {
@@ -52,7 +54,6 @@ const Home = () => {
       <Sidebar onSelect={setSelectedMenu} />
       <div style={{ flex: 1 }}>
         <Header userEmail={user.email} />
-
         <div style={{ padding: '24px' }}>
           {selectedMenu === 'dashboard' && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
@@ -60,11 +61,11 @@ const Home = () => {
                 <Company />
               </div>
               <div style={{ flex: 2 }}>
-                <FinancialTable /> {/* MarketSummary 역할 */}
+                <FinancialTable />
+                <Financial />
               </div>
             </div>
           )}
-
         </div>
       </div>
     </div>
