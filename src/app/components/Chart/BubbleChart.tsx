@@ -3,78 +3,74 @@
 import { useEffect, useRef } from 'react'
 import * as d3 from 'd3'
 
-type BubbleChartProps = {
-  company: string
-}
-
-type Data = {
+type BubbleData = {
   name: string
   value: number
+}
+
+type BubbleChartProps = {
+  company: string
 }
 
 export default function BubbleChart({ company }: BubbleChartProps) {
   const svgRef = useRef<SVGSVGElement | null>(null)
 
   useEffect(() => {
-    const fetchDataAndDraw = async () => {
+    if (!company) return
+
+    const fetchDataAndRender = async () => {
       const res = await fetch(`/api/chart/bubble?company=${encodeURIComponent(company)}`)
       const json = await res.json()
-      const data: Data[] = json.data || []
-
-      console.log('📦 Bubble Data:', data)
-
+      const data: BubbleData[] = json.data || []
       if (!data.length) return
 
-      const width = 600
-      const height = 400
+      const width = 700
+      const height = 500
 
       const svg = d3.select(svgRef.current)
       svg.selectAll('*').remove()
+      svg.attr('width', width).attr('height', height)
 
-      const root = d3
-        .pack()
-        .size([width, height])
-        .padding(5)(
-          d3
-            .hierarchy({ children: data } as any)
-            .sum((d: any) =>
-              typeof d.value === 'number' && !isNaN(d.value) && d.value > 0
-                ? d.value
-                : 1
-            )
-        )
+      const colorScale = d3.scaleOrdinal(d3.schemeCategory10)
 
-      const color = d3.scaleOrdinal(d3.schemeSet3)
+      const simulation = d3.forceSimulation<BubbleData>()
+        .force('center', d3.forceCenter(width / 2, height / 2))
+        .force('charge', d3.forceManyBody().strength(5))
+        .force('collision', d3.forceCollide().radius(d => d.value * 2))
 
-      const node = svg
-        .attr('width', width)
-        .attr('height', height)
-        .selectAll('g')
-        .data(root.leaves())
-        .join('g')
-        .attr('transform', (d) => `translate(${d.x},${d.y})`)
+      const nodes = [...data]
 
-      node
-        .append('circle')
-        .attr('r', (d) => d.r)
-        .attr('fill', (_, i) => color(String(i)))
+      const node = svg.selectAll('g')
+        .data(nodes)
+        .enter()
+        .append('g')
 
-      node
-        .append('text')
-        .text((d) => (d.data as Data).name)
+      node.append('circle')
+        .attr('r', d => d.value * 2)
+        .attr('fill', (d, i) => colorScale(i.toString()))
+        .attr('stroke', '#fff')
+        .attr('stroke-width', 1.5)
+
+      node.append('text')
+        .text(d => d.name)
         .attr('text-anchor', 'middle')
-        .attr('dy', '.3em')
-        .style('font-size', (d) => `${Math.min(d.r / 3, 14)}px`)
-        .style('fill', '#fff')
+        .attr('alignment-baseline', 'middle')
+        .style('font-size', '10px')
+        .style('fill', '#000')
+
+      simulation.nodes(nodes).on('tick', () => {
+        node.attr('transform', d => `translate(${d.x},${d.y})`)
+      })
     }
 
-    fetchDataAndDraw()
+    fetchDataAndRender()
   }, [company])
 
   return (
-    <div style={{ padding: '20px' }}>
-      <h3>{company} 관련 키워드</h3>
-      <svg ref={svgRef}></svg>
+    <div>
+      <h3 style={{ marginBottom: '8px' }}>{company} - 키워드 버블 차트</h3>
+      <svg ref={svgRef} style={{ border: '1px solid #ccc', width: '100%' }} />
     </div>
   )
 }
+

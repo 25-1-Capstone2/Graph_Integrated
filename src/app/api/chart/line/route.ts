@@ -1,55 +1,47 @@
-// src/app/api/chart/line/route.ts
 import { NextResponse } from 'next/server'
 import neo4j from 'neo4j-driver'
 
-const uri = process.env.NEO4J_URI!
-const user = process.env.NEO4J_USERNAME!
-const password = process.env.NEO4J_PASSWORD!
-const driver = neo4j.driver(uri, neo4j.auth.basic(user, password))
+const driver = neo4j.driver(
+  process.env.NEO4J_URI!,
+  neo4j.auth.basic(process.env.NEO4J_USERNAME!, process.env.NEO4J_PASSWORD!)
+)
 
-export async function GET(req: Request) {
-  const { searchParams } = new URL(req.url)
-  const company = searchParams.get('company')
+export async function GET(request: Request) {
+  const { searchParams } = new URL(request.url)
+  const companyName = searchParams.get('company')
 
-  if (!company) {
+  if (!companyName) {
     return NextResponse.json({ error: 'company 파라미터 누락' }, { status: 400 })
   }
 
   const session = driver.session()
 
   try {
-    const codeResult = await session.run(
-      `MATCH (c:Company {name: $company}) RETURN c.code AS code LIMIT 1`,
-      { company }
-    )
-    const codeRecord = codeResult.records[0]
-    if (!codeRecord) {
-      return NextResponse.json({ error: '해당 이름의 회사를 찾을 수 없음' }, { status: 404 })
-    }
-    const code = codeRecord.get('code')
-
     const result = await session.run(
-        `
-        MATCH (f:FinancialItem {company: $code})
-        WHERE f.value IS NOT NULL
-        RETURN f.year AS year, f.name AS name, toFloat(f.value) AS value
-        ORDER BY f.year ASC, f.name ASC
-        `,
-        { code }
-      )
-      
-
-    const data = result.records.map((r) => ({
-      year: r.get('year'),
-      name: r.get('name'),
-      value: r.get('value'),
-    }))
+      `
+      MATCH (c:Company {name: $companyName})-[:HAS_STATEMENT]->(fs:FinancialStatement)
+      WHERE fs.item = '매출액' AND fs.amount IS NOT NULL
+      RETURN toInteger(fs.year) AS year, avg(toFloat(fs.amount)) AS value
+      ORDER BY year ASC
+      `,
+      { companyName }
+    )
+    console.log('Neo4j Raw Result:', result.records);
+    const data = result.records.map((r) => {
+  const year = r.get('year');
+  const value = r.get('value');
+  return {
+    year: neo4j.isInt(year) ? year.toNumber() : year,
+    value: neo4j.isInt(value) ? value.toNumber() : value
+  };
+});
 
     return NextResponse.json({ data })
   } catch (err) {
-    console.error('❌ Line Chart Query Error:', err)
+    console.error('❌ LineChart Query Error:', err)
     return NextResponse.json({ error: 'Query failed' }, { status: 500 })
   } finally {
     await session.close()
   }
 }
+

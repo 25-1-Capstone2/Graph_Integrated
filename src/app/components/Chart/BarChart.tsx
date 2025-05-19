@@ -22,6 +22,8 @@ export default function BarChart({ company }: BarChartProps) {
     const fetchDataAndRender = async () => {
       const res = await fetch(`/api/chart/bar?company=${encodeURIComponent(company)}`)
       const json = await res.json()
+      console.log("BarChart data", json.data)
+      
       const data: ChartData[] = json.data || []
 
       // Group data by year
