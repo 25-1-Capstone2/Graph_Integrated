@@ -7,7 +7,6 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import FinancialTable from './Financial' // ⬅️ 실제는 MarketSummary 역할
 import Company from './Company'
-import StockComp from '@/app/components/StockComp'
 
 type CompanyType = {
   code: string
@@ -66,7 +65,6 @@ const Home = () => {
             </div>
           )}
 
-          {selectedMenu === 'watchlist' && <StockComp />}
         </div>
       </div>
     </div>
