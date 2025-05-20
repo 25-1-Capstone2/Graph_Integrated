@@ -7,6 +7,7 @@ import Header from './Header'
 import Sidebar from './Sidebar'
 import Company from './Company'
 import FinancialTable from './Financial'
+import MaChart from '@/app/components/MaChart'
 import Financial from './Financials'
 import ProfitCalculator from '@/app/components/ProfitCalculator'
 
@@ -77,6 +78,7 @@ const Home = () => {
                 {code && (
                   <div style={{ marginTop: '32px' }}>
                     <ProfitCalculator code={code} companyName={companyName} />
+                    <MaChart code={code} companyName={companyName} />
                   </div>
                 )}
               </div>

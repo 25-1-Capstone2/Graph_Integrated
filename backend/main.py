@@ -10,6 +10,8 @@ from typing import Dict
 from io import StringIO
 import FinanceDataReader as fdr
 from open_trading_api.rest.kis_auth import auth as kis_auth, getTREnv
+from fastapi.responses import JSONResponse
+import numpy as np
 
 app = FastAPI()
 
@@ -71,7 +73,7 @@ def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
 
 # ✅ 10년치 차트 + MA + RSI
 def get_10_year_chart_by_fdr(code: str) -> pd.DataFrame:
-    end = datetime.datetime.today()
+    end = datetime.datetime.today() 
     start = end - datetime.timedelta(days=365 * 10)
     df = fdr.DataReader(code, start, end)
     df.reset_index(inplace=True)
@@ -133,8 +135,34 @@ def price(code: str):
 
 @app.get("/chart")
 def chart(code: str):
-    df = get_10_year_chart_by_fdr(code)
-    return df.to_dict(orient="records")
+    try:
+        df = get_10_year_chart_by_fdr(code)
+
+        # ✅ 날짜 문자열로 변환
+        df["Date"] = df["Date"].astype(str)
+
+        # ✅ NaN 및 inf 제거 → None 처리 (핵심)
+        df = df.replace([np.inf, -np.inf], None)
+        df = df.where(df.notnull(), None)
+
+        # ✅ 일부 float → None으로 못 바뀐 경우 강제 제거
+        clean_records = []
+        for row in df.to_dict(orient="records"):
+            for k, v in row.items():
+                if isinstance(v, float) and (pd.isna(v) or np.isnan(v)):
+                    row[k] = None
+            clean_records.append(row)
+
+        return JSONResponse(content=clean_records)
+
+    except Exception as e:
+        import traceback
+        print("🔥 /chart 오류:", e)
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
+
+
 
 @app.get("/summary")
 def summary(code: str, days: int = 3):
