@@ -2,6 +2,15 @@
 
 import { useEffect, useState } from 'react'
 
+type Props = {
+  companyName: string
+  setCompanyName: (name: string) => void
+  code: string | null
+  setCode: (code: string | null) => void
+  days: number
+  setDays: (days: number) => void
+}
+
 type SummaryItem = {
   날짜: string
   시가: number
@@ -14,15 +23,15 @@ type SummaryItem = {
   거래대금: string
 }
 
-export default function Financial() {
+export default function Financial({
+  companyName, setCompanyName,
+  code, setCode,
+  days, setDays
+}: Props) {
   const [summary, setSummary] = useState<SummaryItem[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [companyName, setCompanyName] = useState('삼성전자') // ✅ 기본값
-  const [code, setCode] = useState<string | null>(null)
-  const [days, setDays] = useState<number>(3)
 
-  // ✅ 회사명 → 종목코드 변환
   const fetchCode = async (name: string) => {
     try {
       const res = await fetch(`http://localhost:8000/code?name=${encodeURIComponent(name)}`)
@@ -61,7 +70,6 @@ export default function Financial() {
     }
   }
 
-  // 기본 실행
   useEffect(() => {
     handleSearch()
   }, [days])
@@ -85,8 +93,6 @@ export default function Financial() {
               조회
             </button>
           </div>
-
-          {/* ✅ 추가된 부분: 현재 입력된 회사명 표시 */}
           <span className="text-sm text-gray-600">
             🔍 조회 대상: <strong>{companyName}</strong>
           </span>

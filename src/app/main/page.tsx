@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Company from './Company'
-import FinancialTable from './Financial' // 기존 MarketSummary 역할
-import Financial from './Financials'     // 분리한 시세 테이블 컴포넌트
+import FinancialTable from './Financial'
+import Financial from './Financials'
+import ProfitCalculator from '@/app/components/ProfitCalculator'
 
 type CompanyType = {
   code: string
@@ -19,6 +20,10 @@ const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<CompanyType[]>([])
   const [selectedMenu, setSelectedMenu] = useState('dashboard')
+
+  const [companyName, setCompanyName] = useState('삼성전자') // 🔍
+  const [code, setCode] = useState<string | null>(null)
+  const [days, setDays] = useState<number>(3)
 
   const router = useRouter()
 
@@ -61,8 +66,19 @@ const Home = () => {
                 <Company />
               </div>
               <div style={{ flex: 2 }}>
-                <FinancialTable />
-                <Financial />
+                <Financial
+                  companyName={companyName}
+                  setCompanyName={setCompanyName}
+                  code={code}
+                  setCode={setCode}
+                  days={days}
+                  setDays={setDays}
+                />
+                {code && (
+                  <div style={{ marginTop: '32px' }}>
+                    <ProfitCalculator code={code} companyName={companyName} />
+                  </div>
+                )}
               </div>
             </div>
           )}

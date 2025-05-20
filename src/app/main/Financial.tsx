@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import MarketChart from '@/app/components/Chart/FinancialChart'
+import MarketChart from '@/app/components/FinancialChart'
 
 type MarketItem = {
   name: string  // 예: "코스피"
