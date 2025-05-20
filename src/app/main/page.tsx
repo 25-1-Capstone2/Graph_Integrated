@@ -10,6 +10,8 @@ import FinancialTable from './Financial'
 import MaChart from '@/app/components/MaChart'
 import Financial from './Financials'
 import ProfitCalculator from '@/app/components/ProfitCalculator'
+import CandleChart from '@/app/components/CandleChart'
+import RSIChart from '@/app/components/RSIChart'
 
 type CompanyType = {
   code: string
@@ -77,14 +79,17 @@ const Home = () => {
                 />
                 {code && (
                   <div style={{ marginTop: '32px' }}>
+                    <FinancialTable /> {/* MarketSummary 역할 */}
                     <ProfitCalculator code={code} companyName={companyName} />
                     <MaChart code={code} companyName={companyName} />
+                    <CandleChart code={code} companyName={companyName} />
+                    <RSIChart code={code} companyName={companyName} />
                   </div>
                 )}
               </div>
             </div>
           )}
-        </div>
+        </div>  
       </div>
     </div>
   )

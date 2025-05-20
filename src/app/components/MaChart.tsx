@@ -1,8 +1,14 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import Plot from 'react-plotly.js'
+import dynamic from 'next/dynamic'
 import { Layout } from 'plotly.js'
+
+// ✅ Plotly를 클라이언트에서만 로딩하도록 동적 import
+const Plot = dynamic(() => import('react-plotly.js'), {
+  ssr: false,
+  loading: () => <p>📊 차트 불러오는 중...</p>
+})
 
 type Props = {
   code: string
@@ -57,6 +63,7 @@ export default function MaChart({ code, companyName }: Props) {
     xaxis: { title: { text: '날짜' } },
     yaxis: { title: { text: '가격 (₩)' } },
     margin: { t: 40, l: 50, r: 30, b: 50 },
+    legend: { orientation: 'h' },
     template: 'plotly_white' as any
   }
 
@@ -65,15 +72,51 @@ export default function MaChart({ code, companyName }: Props) {
       <h2 className="text-lg font-semibold mb-2">📈 이동평균선 차트</h2>
       <Plot
         data={[
-          { x: date, y: close, type: 'scatter', mode: 'lines', name: '종가' },
-          { x: date, y: ma5, type: 'scatter', mode: 'lines', name: 'MA5' },
-          { x: date, y: ma20, type: 'scatter', mode: 'lines', name: 'MA20' },
-          { x: date, y: ma60, type: 'scatter', mode: 'lines', name: 'MA60' },
-          { x: date, y: ma120, type: 'scatter', mode: 'lines', name: 'MA120' }
+          {
+            x: date,
+            y: close,
+            type: 'scatter',
+            mode: 'lines',
+            name: '종가',
+            line: { color: 'blue', width: 2 }
+          },
+          {
+            x: date,
+            y: ma5,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'MA5',
+            line: { width: 1.5 }
+          },
+          {
+            x: date,
+            y: ma20,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'MA20',
+            line: { width: 1.5 }
+          },
+          {
+            x: date,
+            y: ma60,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'MA60',
+            line: { width: 1.5 }
+          },
+          {
+            x: date,
+            y: ma120,
+            type: 'scatter',
+            mode: 'lines',
+            name: 'MA120',
+            line: { width: 1.5 }
+          }
         ]}
         layout={layout}
         useResizeHandler
         style={{ width: '100%', height: '450px' }}
+        config={{ responsive: true }}
       />
     </div>
   )

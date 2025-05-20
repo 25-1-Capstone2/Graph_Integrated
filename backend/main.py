@@ -24,6 +24,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # ✅ 종목명 → 코드 변환
 def get_kospi_code_dict() -> Dict[str, str]:
     url = "https://kind.krx.co.kr/corpgeneral/corpList.do?method=download"
@@ -59,6 +60,8 @@ def get_stock_price(code: str) -> Dict[str, str]:
         "price": int(data["output"]["stck_prpr"]),
         "time": datetime.datetime.now().strftime("%H:%M:%S")
     }
+
+
 
 # ✅ RSI 계산
 def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
@@ -160,9 +163,6 @@ def chart(code: str):
         print("🔥 /chart 오류:", e)
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
-
-
-
 
 @app.get("/summary")
 def summary(code: str, days: int = 3):
