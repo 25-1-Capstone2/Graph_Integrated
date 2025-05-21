@@ -14,14 +14,13 @@ export async function GET() {
   try {
     const result = await session.run(`
       MATCH (c:Company)
-      RETURN c.code AS code, c.name AS name, c.sector AS sector
+      RETURN c.code AS code, c.name AS name
       ORDER BY c.name ASC
     `)
 
     const data = result.records.map(r => ({
       code: r.get('code'),
       name: r.get('name'),
-      sector: r.get('sector')
     }))
 
     return NextResponse.json({ data })
