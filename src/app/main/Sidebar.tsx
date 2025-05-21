@@ -14,6 +14,7 @@ const Sidebar = ({ onSelect }: SidebarProps) => {
   const menuItems = [
     { label: '대시보드', key: 'dashboard' },
     { label: '관심 종목', key: 'watchlist' },
+    { label: '주식차트', key: 'stockchart' },
     { label: '설정', key: 'settings' }
   ]
 

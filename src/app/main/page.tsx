@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Company from './Company'
-import FinancialTable from './Financial'
-import MaChart from '@/app/components/MaChart'
-import Financial from './Financials'
+import FinancialTable from './Financial'           // 시세 요약 (주식 개별 종목)
 import ProfitCalculator from '@/app/components/ProfitCalculator'
+import MaChart from '@/app/components/MaChart'
 import CandleChart from '@/app/components/CandleChart'
 import RSIChart from '@/app/components/RSIChart'
+import Financial from './Financials'
 
 type CompanyType = {
   code: string
@@ -24,7 +24,8 @@ const Home = () => {
   const [company, setCompany] = useState<CompanyType[]>([])
   const [selectedMenu, setSelectedMenu] = useState('dashboard')
 
-  const [companyName, setCompanyName] = useState('삼성전자') // 🔍
+  // 주식 검색 관련 상태 (stockchart 전용)
+  const [companyName, setCompanyName] = useState('삼성전자')
   const [code, setCode] = useState<string | null>(null)
   const [days, setDays] = useState<number>(3)
 
@@ -39,19 +40,16 @@ const Home = () => {
         setUser(session.user)
       }
     }
-
     fetchSession()
   }, [router])
 
   useEffect(() => {
     if (!user || selectedMenu !== 'dashboard') return
-
     const fetchCompany = async () => {
       const res = await fetch('/api/company')
       const json = await res.json()
       setCompany(json.data || [])
     }
-
     fetchCompany()
   }, [user, selectedMenu])
 
@@ -63,33 +61,41 @@ const Home = () => {
       <div style={{ flex: 1 }}>
         <Header userEmail={user.email} />
         <div style={{ padding: '24px' }}>
+          {/* 대시보드 선택 시: 코스피 지수만 보여줌 */}
           {selectedMenu === 'dashboard' && (
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
               <div style={{ flex: 1 }}>
                 <Company />
               </div>
               <div style={{ flex: 2 }}>
-                <Financial
-                  companyName={companyName}
-                  setCompanyName={setCompanyName}
-                  code={code}
-                  setCode={setCode}
-                  days={days}
-                  setDays={setDays}
-                />
-                {code && (
-                  <div style={{ marginTop: '32px' }}>
-                    <FinancialTable /> {/* MarketSummary 역할 */}
-                    <ProfitCalculator code={code} companyName={companyName} />
-                    <MaChart code={code} companyName={companyName} />
-                    <CandleChart code={code} companyName={companyName} />
-                    <RSIChart code={code} companyName={companyName} />
-                  </div>
-                )}
+                <FinancialTable /> {/* MarketSummary 역할 */}
               </div>
             </div>
           )}
-        </div>  
+
+          {/* 주식차트 선택 시: 기존 주식 검색 + 금융 관련 컴포넌트 전부 보여줌 */}
+          {selectedMenu === 'stockchart' && (
+            <div>
+              <Financial
+                companyName={companyName}
+                setCompanyName={setCompanyName}
+                code={code}
+                setCode={setCode}
+                days={days}
+                setDays={setDays}
+              />
+              {code && (
+                <div style={{ marginTop: '32px' }}>
+                  <MaChart code={code} companyName={companyName} />
+                  <CandleChart code={code} companyName={companyName} />
+                  <RSIChart code={code} companyName={companyName} />
+                  <ProfitCalculator code={code} companyName={companyName} />
+                </div>
+              )}
+              {!code && <p>종목을 먼저 검색해주세요.</p>}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
