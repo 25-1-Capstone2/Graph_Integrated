@@ -56,50 +56,50 @@ export default function CombinedChart({ code, companyName }: Props) {
   const close = data.map((d) => d.Close)
 
   const layout: Partial<Layout> = {
-    title: { text: `${companyName} - 봉차트 + 종가 라인` },
+    title: { text: `${companyName}` },
     autosize: true,
+    margin: { t: 40, l: 50, r: 30, b: 50 },
     xaxis: { title: { text: '날짜' } },
     yaxis: { title: { text: '가격 (₩)' } },
-    margin: { t: 40, l: 50, r: 30, b: 50 },
     legend: { orientation: 'h' },
     template: 'plotly_white' as any
   }
 
   return (
-    <div className="mt-8" style={{ minWidth: '720px' }}>
-      <h2 className="text-lg font-semibold mb-2">📊 통합 차트 (봉 + 종가)</h2>
-      <Plot
-        data={[
-          {
-            x: date,
-            open: open,
-            high: high,
-            low: low,
-            close: close,
-            type: 'candlestick',
-            name: '봉차트',
-            increasing: { line: { color: 'red' } },
-            decreasing: { line: { color: 'blue' } }
-          },
-          {
-            x: date,
-            y: close,
-            type: 'scatter',
-            mode: 'lines',
-            name: '종가',
-            line: { color: '#555', width: 1.5, dash: 'dot' }
-          }
-        ]}
-        layout={layout}
-        useResizeHandler
-        style={{
-          width: '100%',
-          minWidth: '700px',
-          height: '600px',
-          maxWidth: '100%'
-        }}
-        config={{ responsive: true }}
-      />
+    <div className="mt-8 w-full overflow-x-auto">
+      <div className="min-w-[700px] max-w-full">
+        <Plot
+          key={code}
+          data={[
+            {
+              x: date,
+              open: open,
+              high: high,
+              low: low,
+              close: close,
+              type: 'candlestick',
+              name: '봉차트',
+              increasing: { line: { color: 'red' } },
+              decreasing: { line: { color: 'blue' } }
+            },
+            {
+              x: date,
+              y: close,
+              type: 'scatter',
+              mode: 'lines',
+              name: '종가',
+              line: { color: '#555', width: 1.5, dash: 'dot' }
+            }
+          ]}
+          layout={layout}
+          useResizeHandler
+          style={{
+            width: '100%',
+            height: '600px'
+          }}
+          config={{ responsive: true }}
+        />
+      </div>
     </div>
   )
 }

@@ -73,14 +73,14 @@ const Home = () => {
                   }} />
                 </div>
                 <div style={{ flex: 2 }}>
-                  <FinancialTable /> {/* MarketSummary 역할 */}
+                  <FinancialTable
+                    code={code}
+                    companyName={companyName}
+                    setCode={setCode}
+                    setCompanyName={setCompanyName}
+                  />
                 </div>
               </div>
-              {code && (
-                <div style={{ marginTop: '24px' }}>
-                  <CombinedChart code={code} companyName={companyName} />
-                </div>
-              )}
             </div>
           )}
 
