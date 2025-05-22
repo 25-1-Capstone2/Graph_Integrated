@@ -12,6 +12,7 @@ import MaChart from '@/app/components/MaChart'
 import CandleChart from '@/app/components/CandleChart'
 import RSIChart from '@/app/components/RSIChart'
 import Financial from './Financials'
+import CombinedChart from '@/app/components/Comapny_Chart'
 
 type CompanyType = {
   code: string
@@ -61,15 +62,25 @@ const Home = () => {
       <div style={{ flex: 1 }}>
         <Header userEmail={user.email} />
         <div style={{ padding: '24px' }}>
-          {/* 대시보드 선택 시: 코스피 지수만 보여줌 */}
+          {/* 대시보드 선택 시: 코스피 지수 + 선택된 종목 차트 */}
           {selectedMenu === 'dashboard' && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px' }}>
-              <div style={{ flex: 1 }}>
-                <Company />
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', flexDirection: 'column' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', width: '100%' }}>
+                <div style={{ flex: 1 }}>
+                  <Company onSelect={(code, name) => {
+                    setCode(code)
+                    setCompanyName(name)
+                  }} />
+                </div>
+                <div style={{ flex: 2 }}>
+                  <FinancialTable /> {/* MarketSummary 역할 */}
+                </div>
               </div>
-              <div style={{ flex: 2 }}>
-                <FinancialTable /> {/* MarketSummary 역할 */}
-              </div>
+              {code && (
+                <div style={{ marginTop: '24px' }}>
+                  <CombinedChart code={code} companyName={companyName} />
+                </div>
+              )}
             </div>
           )}
 

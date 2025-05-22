@@ -177,3 +177,21 @@ def candle(code: str):
 @app.get("/profit")
 def profit(code: str, buy_price: int, quantity: int):
     return calculate_profit(code, buy_price, quantity)
+
+@app.get("/combined")
+def combined_chart(code: str):
+    try:
+        df = get_candle_data(code)
+        df["Date"] = df["Date"].astype(str)
+        df = df[["Date", "Open", "High", "Low", "Close"]]
+
+        # NaN 처리
+        df = df.replace([np.inf, -np.inf], None)
+        df = df.where(df.notnull(), None)
+
+        return df.to_dict(orient="records")
+    except Exception as e:
+        import traceback
+        print("🔥 /combined 오류:", e)
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
