@@ -12,7 +12,6 @@ import MaChart from '@/app/components/MaChart'
 import CandleChart from '@/app/components/CandleChart'
 import RSIChart from '@/app/components/RSIChart'
 import Financial from './Financials'
-import CombinedChart from '@/app/components/Comapny_Chart'
 
 type CompanyType = {
   code: string

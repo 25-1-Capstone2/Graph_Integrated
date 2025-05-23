@@ -4,13 +4,14 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Layout } from 'plotly.js'
 
+// ✅ loading 없앰 (flicker 방지용)
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
-  loading: () => <p>📊 차트 불러오는 중...</p>
+  loading: () => null
 })
 
 type Props = {
-  code: string
+  code: string | null
   companyName: string
 }
 
@@ -56,12 +57,12 @@ export default function CombinedChart({ code, companyName }: Props) {
   const close = data.map((d) => d.Close)
 
   const layout: Partial<Layout> = {
-    title: { text: `${companyName} - 통합 차트` },
+    title: { text: `${companyName}` },
     autosize: true,
     margin: { t: 40, l: 50, r: 30, b: 50 },
     xaxis: {
       title: { text: '날짜' },
-      rangeslider: { visible: false } // ✅ 하단 슬라이더 제거
+      rangeslider: { visible: false }
     },
     yaxis: { title: { text: '가격 (₩)' } },
     legend: { orientation: 'h' },
@@ -69,9 +70,10 @@ export default function CombinedChart({ code, companyName }: Props) {
   }
 
   return (
-    <div className="flex-1 w-full overflow-hidden">
+    // ✅ min-height 추가: 깜빡임 방지 + 반응형 지원
+    <div className="flex-1 w-full overflow-hidden min-h-[400px]">
       <Plot
-        key={code}
+        // ✅ key 제거: 불필요한 재마운트 방지
         data={[
           {
             x: date,
@@ -94,9 +96,9 @@ export default function CombinedChart({ code, companyName }: Props) {
           }
         ]}
         layout={layout}
-        useResizeHandler
-        style={{ width: '100%', height: '100%' }}
         config={{ responsive: true }}
+        useResizeHandler={true}
+        style={{ width: '100%', height: '100%' }} // ✅ 부모 크기 기반
       />
     </div>
   )
