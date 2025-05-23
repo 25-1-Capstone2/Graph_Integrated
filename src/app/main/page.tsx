@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Header from './Header'
 import Sidebar from './Sidebar'
 import Company from './Company'
-import FinancialTable from './Financial'           // 시세 요약 (주식 개별 종목)
+import FinancialTable from './Financial'
 import ProfitCalculator from '@/app/components/ProfitCalculator'
 import MaChart from '@/app/components/MaChart'
 import CandleChart from '@/app/components/CandleChart'
@@ -24,12 +24,9 @@ const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<CompanyType[]>([])
   const [selectedMenu, setSelectedMenu] = useState('dashboard')
-
-  // 주식 검색 관련 상태 (stockchart 전용)
   const [companyName, setCompanyName] = useState('삼성전자')
   const [code, setCode] = useState<string | null>(null)
   const [days, setDays] = useState<number>(3)
-
   const router = useRouter()
 
   useEffect(() => {
@@ -57,22 +54,21 @@ const Home = () => {
   if (!user) return null
 
   return (
-    <div style={{ display: 'flex' }}>
-      <Sidebar onSelect={setSelectedMenu} />
-      <div style={{ flex: 1 }}>
-        <Header userEmail={user.email} />
-        <div style={{ padding: '24px' }}>
-          {/* 대시보드 선택 시: 코스피 지수 + 선택된 종목 차트 */}
+    <div className="flex flex-col h-screen">
+      <Header userEmail={user.email} />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar onSelect={setSelectedMenu} />
+        <main className="flex-1 overflow-auto p-6">
           {selectedMenu === 'dashboard' && (
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', flexDirection: 'column' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '24px', width: '100%' }}>
-                <div style={{ flex: 1 }}>
+            <div className="flex flex-col gap-6 h-full">
+              <div className="flex gap-6 h-full">
+                <div className="w-1/3 overflow-y-auto">
                   <Company onSelect={(code, name) => {
                     setCode(code)
                     setCompanyName(name)
                   }} />
                 </div>
-                <div style={{ flex: 2 }}>
+                <div className="flex-1 overflow-hidden">
                   <FinancialTable
                     code={code}
                     companyName={companyName}
@@ -84,7 +80,6 @@ const Home = () => {
             </div>
           )}
 
-          {/* 주식차트 선택 시: 기존 주식 검색 + 금융 관련 컴포넌트 전부 보여줌 */}
           {selectedMenu === 'stockchart' && (
             <div>
               <Financial
@@ -96,7 +91,7 @@ const Home = () => {
                 setDays={setDays}
               />
               {code && (
-                <div style={{ marginTop: '32px' }}>
+                <div className="mt-8">
                   <MaChart code={code} companyName={companyName} />
                   <CandleChart code={code} companyName={companyName} />
                   <RSIChart code={code} companyName={companyName} />
@@ -106,7 +101,7 @@ const Home = () => {
               {!code && <p>종목을 먼저 검색해주세요.</p>}
             </div>
           )}
-        </div>
+        </main>
       </div>
     </div>
   )
