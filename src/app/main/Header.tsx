@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation'
 import supabase from '../../lib/supabase'
+import { Button } from '@/app/components/ui/button'
 
 type Props = {
   userEmail: string
@@ -17,22 +18,12 @@ const Header = ({ userEmail }: Props) => {
   }
 
   return (
-    <header style={{ position: 'relative', padding: '1rem' }}>
-      <div style={{ position: 'absolute', top: '1rem', right: '1rem' }}>
-        <span style={{ marginRight: '1rem' }}>{userEmail}님</span>
-        <button
-          onClick={handleLogout}
-          style={{
-            padding: '0.5rem 1rem',
-            backgroundColor: '#ef4444',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.5rem',
-            cursor: 'pointer'
-          }}
-        >
+    <header className="w-full bg-white border-b border-gray-200 px-6 py-4 flex justify-end items-center">
+      <div className="flex items-center gap-4">
+        <span className="text-sm text-gray-700">{userEmail}님</span>
+        <Button variant="destructive" onClick={handleLogout}>
           로그아웃
-        </button>
+        </Button>
       </div>
     </header>
   )
