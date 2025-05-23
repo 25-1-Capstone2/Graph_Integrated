@@ -1,6 +1,8 @@
 'use client'
 
 import { useState } from 'react'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 
 type Props = {
   code: string
@@ -41,7 +43,7 @@ export default function ProfitCalculator({ code, companyName }: Props) {
       <div className="space-y-3">
         <div>
           <label className="block text-sm font-medium">매입 단가 (₩)</label>
-          <input
+          <Input
             type="number"
             className="border rounded p-2 w-full"
             value={buyPrice}
@@ -51,7 +53,7 @@ export default function ProfitCalculator({ code, companyName }: Props) {
 
         <div>
           <label className="block text-sm font-medium">매입 수량 (주)</label>
-          <input
+          <Input
             type="number"
             className="border rounded p-2 w-full"
             value={quantity}
@@ -59,13 +61,13 @@ export default function ProfitCalculator({ code, companyName }: Props) {
           />
         </div>
 
-        <button
+        <Button
           onClick={handleCalculate}
           className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
           disabled={loading}
         >
           {loading ? '계산 중...' : '수익률 계산'}
-        </button>
+        </Button>
 
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
@@ -76,13 +78,11 @@ export default function ProfitCalculator({ code, companyName }: Props) {
             <p>📌 <strong>총 손익:</strong> 
               {typeof result['총 손익'] === 'number'
                 ? (result['총 손익'] >= 0 ? '🔺' : '🔻') + ' ₩' + result['총 손익'].toLocaleString()
-                : '-'}
-            </p>
+                : '-'}</p>
             <p>📌 <strong>수익률:</strong> 
               {typeof result['수익률(%)'] === 'number'
                 ? (result['수익률(%)'] >= 0 ? '🔺' : '🔻') + ' ' + result['수익률(%)'].toFixed(2) + '%'
-                : '-'}
-            </p>
+                : '-'}</p>
           </div>
         )}
       </div>
