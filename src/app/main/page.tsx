@@ -3,15 +3,18 @@
 import { useEffect, useState } from 'react'
 import supabase from '../../lib/supabase'
 import { useRouter } from 'next/navigation'
+import { ChevronsLeft, ChevronsRight } from 'lucide-react'
+import { Button } from '@/app/components/ui/button'
+
 import Header from './Header'
-import Sidebar from './Sidebar'
 import Company from './Company'
 import FinancialTable from './Financial'
-import ProfitCalculator from '@/app/components/ProfitCalculator'
+import Sidebar from './Sidebar'
+import Financial from './Financials'
 import MaChart from '@/app/components/MaChart'
 import CandleChart from '@/app/components/CandleChart'
 import RSIChart from '@/app/components/RSIChart'
-import Financial from './Financials'
+import ProfitCalculator from '@/app/components/ProfitCalculator'
 
 type CompanyType = {
   code: string
@@ -23,6 +26,7 @@ const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [company, setCompany] = useState<CompanyType[]>([])
   const [selectedMenu, setSelectedMenu] = useState('dashboard')
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
   const [companyName, setCompanyName] = useState('삼성전자')
   const [code, setCode] = useState<string | null>(null)
   const [days, setDays] = useState<number>(3)
@@ -53,28 +57,45 @@ const Home = () => {
   if (!user) return null
 
   return (
-    <div className="flex flex-col h-screen">
-      <Header userEmail={user.email} />
-      <div className="flex flex-1 overflow-hidden">
-        <Sidebar onSelect={setSelectedMenu} />
-        <main className="flex-1 overflow-auto p-6">
+    <div className="flex h-screen relative">
+      {/* ✅ 토글 버튼: 항상 좌상단 고정 */}
+      <Button
+        onClick={() => setIsSidebarOpen(prev => !prev)}
+        variant="outline"
+        size="icon"
+        className="absolute top-4 left-4 z-50 bg-white border border-gray-300 shadow"
+      >
+        {isSidebarOpen ? <ChevronsLeft size={20} /> : <ChevronsRight size={20} />}
+      </Button>
+
+      {/* ✅ 사이드바 */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        selectedMenu={selectedMenu}
+        setSelectedMenu={setSelectedMenu}
+        toggleSidebar={() => setIsSidebarOpen(prev => !prev)}
+      />
+
+      {/* ✅ 본문 */}
+      <div className="flex-1 flex flex-col">
+        <Header userEmail={user.email} />
+
+        <main className="flex-1 overflow-y-auto p-6">
           {selectedMenu === 'dashboard' && (
-            <div className="flex flex-col gap-6 h-full">
-              <div className="flex gap-6 h-full">
-                <div className="w-1/3 overflow-y-auto">
-                  <Company onSelect={(code, name) => {
-                    setCode(code)
-                    setCompanyName(name)
-                  }} />
-                </div>
-                <div className="flex-1 overflow-hidden">
-                  <FinancialTable
-                    code={code}
-                    companyName={companyName}
-                    setCode={setCode}
-                    setCompanyName={setCompanyName}
-                  />
-                </div>
+            <div className="flex gap-6 h-full">
+              <div className="w-1/3 overflow-y-auto">
+                <Company onSelect={(code, name) => {
+                  setCode(code)
+                  setCompanyName(name)
+                }} />
+              </div>
+              <div className="flex-1 overflow-hidden">
+                <FinancialTable
+                  code={code}
+                  companyName={companyName}
+                  setCode={setCode}
+                  setCompanyName={setCompanyName}
+                />
               </div>
             </div>
           )}
@@ -89,15 +110,16 @@ const Home = () => {
                 days={days}
                 setDays={setDays}
               />
-              {code && (
+              {code ? (
                 <div className="mt-8">
                   <MaChart code={code} companyName={companyName} />
                   <CandleChart code={code} companyName={companyName} />
                   <RSIChart code={code} companyName={companyName} />
                   <ProfitCalculator code={code} companyName={companyName} />
                 </div>
+              ) : (
+                <p>종목을 먼저 검색해주세요.</p>
               )}
-              {!code && <p>종목을 먼저 검색해주세요.</p>}
             </div>
           )}
         </main>
