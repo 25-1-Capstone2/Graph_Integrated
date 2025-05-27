@@ -183,19 +183,33 @@ def profit(code: str, buy_price: int, quantity: int):
 def combined_chart(code: str):
     try:
         df = get_candle_data(code)
+        df["MA5"] = df["Close"].rolling(window=5).mean()
+        df["MA20"] = df["Close"].rolling(window=20).mean()
+        df["MA60"] = df["Close"].rolling(window=60).mean()
+        df["MA120"] = df["Close"].rolling(window=120).mean()
         df["Date"] = df["Date"].astype(str)
-        df = df[["Date", "Open", "High", "Low", "Close"]]
+        df = df[["Date", "Open", "High", "Low", "Close", "MA5", "MA20", "MA60", "MA120"]]
 
-        # NaN 처리
+        # 1. inf, -inf를 None으로
         df = df.replace([np.inf, -np.inf], None)
+        # 2. NaN을 None으로 (where)
         df = df.where(df.notnull(), None)
-
-        return df.to_dict(orient="records")
+        # 3. 남은 NaN/inf 강제 변환 (dict 변환 후 수작업)
+        clean_records = []
+        for row in df.to_dict(orient="records"):
+            for k, v in row.items():
+                # 만약 float이면서 NaN이라면 None으로
+                if isinstance(v, float) and (pd.isna(v) or np.isnan(v)):
+                    row[k] = None
+            clean_records.append(row)
+        return JSONResponse(content=clean_records)
     except Exception as e:
         import traceback
         print("🔥 /combined 오류:", e)
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
+
+
     
 @app.get("/company")
 def company():
