@@ -204,11 +204,9 @@ export default function CombinedChart({ code, companyName }: Props) {
                 name: "캔들스틱",
                 increasing: {
                   line: { color: "#ef4444", width: 1 },
-                  fillcolor: "#ef4444",
                 },
                 decreasing: {
                   line: { color: "#3b82f6", width: 1 },
-                  fillcolor: "#3b82f6",
                 },
                 hovertemplate:
                   "<b>%{x}</b><br>" +

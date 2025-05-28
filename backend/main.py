@@ -2,8 +2,6 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
 import datetime
-import os
-import sys
 import pandas as pd
 import requests
 from typing import Dict
