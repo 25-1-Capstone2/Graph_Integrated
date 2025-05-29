@@ -159,36 +159,6 @@ export default function CombinedChart({ code, companyName }: Props) {
 
   return (
     <div className="h-full flex flex-col bg-white">
-      {/* Chart Header */}
-      <div className="px-6 py-4 border-b border-gray-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-lg font-semibold text-gray-900">통합 차트</h3>
-            <p className="text-sm text-gray-500 mt-1">캔들스틱 + 이동평균선</p>
-          </div>
-
-          {/* Moving Average Legend */}
-          <div className="flex items-center space-x-4 text-xs">
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-0.5 bg-cyan-400"></div>
-              <span className="text-gray-600">MA5</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-0.5 bg-lime-400"></div>
-              <span className="text-gray-600">MA20</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-0.5 bg-amber-400"></div>
-              <span className="text-gray-600">MA60</span>
-            </div>
-            <div className="flex items-center space-x-1">
-              <div className="w-3 h-0.5 bg-pink-400"></div>
-              <span className="text-gray-600">MA120</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Chart Container */}
       <div className="flex-1 p-4">
         <div className="h-full bg-gradient-to-br from-gray-50 to-white rounded-lg border border-gray-200 overflow-hidden">

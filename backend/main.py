@@ -10,6 +10,17 @@ import FinanceDataReader as fdr
 from open_trading_api.rest.kis_auth import auth as kis_auth, getTREnv
 from fastapi.responses import JSONResponse
 import numpy as np
+import os
+from dotenv import load_dotenv
+import os
+import json
+import requests
+import asyncio
+import websockets
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from base64 import b64decode
 
 app = FastAPI()
 
@@ -22,6 +33,77 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env.local')
+load_dotenv(dotenv_path=env_path)
+
+APP_KEY = os.getenv('KIS_API_KEY')
+APP_SECRET = os.getenv('KIS_API_SECRET')
+CUST_TYPE = 'P'
+WS_URL = 'ws://ops.koreainvestment.com:21000'
+
+
+
+def get_approval(key, secret):
+    url = 'https://openapi.koreainvestment.com:9443'
+    headers = {"content-type": "application/json"}
+    body = {
+        "grant_type": "client_credentials",
+        "appkey": key,
+        "secretkey": secret
+    }
+    PATH = "oauth2/Approval"
+    URL = f"{url}/{PATH}"
+    res = requests.post(URL, headers=headers, data=json.dumps(body))
+    approval_key = res.json()["approval_key"]
+    return approval_key
+
+def parse_hoga(data):
+    recvvalue = data.split('^')
+    return {
+        "stock_code": recvvalue[0],
+        "sell": [{"price": recvvalue[12 - i], "qty": recvvalue[32 - i]} for i in range(10)],
+        "buy":  [{"price": recvvalue[13 + i], "qty": recvvalue[33 + i]} for i in range(10)],
+        "sell_total": recvvalue[43],
+        "buy_total": recvvalue[44],
+        "acc_vol": recvvalue[53]
+    }
+
+@app.websocket("/ws/orderbook")
+async def websocket_endpoint(websocket: WebSocket, code: str = Query(...)):
+    await websocket.accept()
+    try:
+        approval_key = get_approval(APP_KEY, APP_SECRET)
+        async with websockets.connect(WS_URL, ping_interval=None) as kis_ws:
+            senddata = {
+                "header": {
+                    "approval_key": approval_key,
+                    "custtype": CUST_TYPE,
+                    "tr_type": "1",
+                    "content-type": "utf-8"
+                },
+                "body": {
+                    "input": {
+                        "tr_id": "H0STASP0",
+                        "tr_key": code
+                    }
+                }
+            }
+            await kis_ws.send(json.dumps(senddata))
+            while True:
+                data = await kis_ws.recv()
+                if data[0] == '0':
+                    recvstr = data.split('|')
+                    trid0 = recvstr[1]
+                    if trid0 == "H0STASP0":
+                        parsed = parse_hoga(recvstr[3])
+                        await websocket.send_json({"type": "orderbook", "data": parsed})
+    except WebSocketDisconnect:
+        print(f"[WebSocket] 클라이언트 연결 종료({code})")
+    except Exception as e:
+        print(f"에러: {e}")
+        await websocket.close()
 
 # ✅ 종목명 → 코드 변환
 def get_kospi_code_dict() -> Dict[str, str]:
@@ -220,3 +302,76 @@ def company():
         print("🔥 /company 오류:", e)
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
+    
+    
+    
+@app.get("/orderbook")
+def orderbook(code: str):
+    """
+    선택한 종목코드(code)로 한국투자증권 OpenAPI에서 실시간 호가정보(10단계) 반환
+    """
+    try:
+        token = get_token()
+        env = getTREnv()
+        headers = {
+            "authorization": f"Bearer {token}",
+            "appkey": KIS_API_KEY,
+            "appsecret": KIS_API_SECRET,
+            "tr_id": "FHKST01010200"
+        }
+        params = {
+            "fid_cond_mrkt_div_code": "J",  # 코스피/코스닥
+            "fid_input_iscd": code          # 여기에 선택된 code가 들어감!
+        }
+        url = f"{env.my_url}/uapi/domestic-stock/v1/quotations/inquire-ask-price"
+        res = requests.get(url, headers=headers, params=params)
+        print("🔥 한국투자증권 원본 응답(res.text):", res.text)
+        try:
+            data = res.json()
+        except Exception as e:
+            print("🔥 JSON 디코딩 에러! 원본:", res.text)
+            return JSONResponse(status_code=500, content={"error": "API JSONDecodeError", "raw": res.text})
+
+        if "output" not in data:
+            print("🔥 output 없음! 전체 응답:", data)
+            return JSONResponse(status_code=500, content={"error": "한국투자증권 output 없음", "raw": data})
+
+        output = data.get("output", {})
+
+        asks = []
+        bids = []
+        for i in range(1, 11):
+            ask_price = int(output.get(f"askp{i}", 0))
+            ask_qty = int(output.get(f"askp_rsqn{i}", 0))
+            bid_price = int(output.get(f"bidp{i}", 0))
+            bid_qty = int(output.get(f"bidp_rsqn{i}", 0))
+            if ask_price > 0:
+                asks.append({
+                    "price": ask_price,
+                    "quantity": ask_qty,
+                    "total": ask_price * ask_qty
+                })
+            if bid_price > 0:
+                bids.append({
+                    "price": bid_price,
+                    "quantity": bid_qty,
+                    "total": bid_price * bid_qty
+                })
+
+        current_price = int(output.get("stck_prpr", 0))
+        price_change = int(output.get("prdy_vrss", 0))
+        price_change_percent = float(output.get("prdy_ctrt", 0))
+
+        return {
+            "asks": asks[::-1],  # 높은 가격이 위로 오게
+            "bids": bids,
+            "currentPrice": current_price,
+            "priceChange": price_change,
+            "priceChangePercent": price_change_percent
+        }
+    except Exception as e:
+        import traceback
+        print("🔥 /orderbook 예외:", e)
+        traceback.print_exc()
+        return JSONResponse(status_code=500, content={"error": str(e)})
+
