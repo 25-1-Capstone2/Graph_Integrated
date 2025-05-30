@@ -1,42 +1,42 @@
-'use client'
+"use client"
 
-import { useEffect, useState } from 'react'
-import supabase from '../../lib/supabase'
-import { useRouter } from 'next/navigation'
-import { ChevronsLeft, ChevronsRight } from 'lucide-react'
-import { Button } from '@/app/components/ui/button'
+import { useEffect, useState } from "react"
+import supabase from "../../lib/supabase"
+import { useRouter } from "next/navigation"
+import Header from "./Header"
+import Watchlist from "@/app/components/Watchlist"
+import FinancialTable from "./Financial"
+import ProfitCalculator from "@/app/components/ProfitCalculator"
+import MaChart from "@/app/components/MaChart"
+import CandleChart from "@/app/components/CandleChart"
+import RSIChart from "@/app/components/RSIChart"
+import Financial from "./Financials"
+import CombinedChart from '@/app/components/Company_Chart'
+import OrderBook from "@/app/components/OrderBook"
 
-import Header from './Header'
-import Company from './Company'
-import FinancialTable from './Financial'
-import Sidebar from './Sidebar'
-import Financial from './Financials'
-import MaChart from '@/app/components/MaChart'
-import CandleChart from '@/app/components/CandleChart'
-import RSIChart from '@/app/components/RSIChart'
-import ProfitCalculator from '@/app/components/ProfitCalculator'
-
-type CompanyType = {
+type Stock = {
   code: string
   name: string
-  sector: string
 }
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
-  const [company, setCompany] = useState<CompanyType[]>([])
-  const [selectedMenu, setSelectedMenu] = useState('dashboard')
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
-  const [companyName, setCompanyName] = useState('삼성전자')
-  const [code, setCode] = useState<string | null>(null)
+  const [selectedStock, setSelectedStock] = useState<Stock>({
+    code: "005930",
+    name: "삼성전자",
+  })
+  const [selectedMenu, setSelectedMenu] = useState("dashboard")
   const [days, setDays] = useState<number>(3)
   const router = useRouter()
 
+  // 로그인 세션 체크
   useEffect(() => {
     const fetchSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
       if (!session) {
-        router.push('/login')
+        router.push("/login")
       } else {
         setUser(session.user)
       }
@@ -44,85 +44,97 @@ const Home = () => {
     fetchSession()
   }, [router])
 
-  useEffect(() => {
-    if (!user || selectedMenu !== 'dashboard') return
-    const fetchCompany = async () => {
-      const res = await fetch('/api/company')
-      const json = await res.json()
-      setCompany(json.data || [])
-    }
-    fetchCompany()
-  }, [user, selectedMenu])
-
   if (!user) return null
 
   return (
-    <div className="flex h-screen relative">
-      {/* ✅ 토글 버튼: 항상 좌상단 고정 */}
-      <Button
-        onClick={() => setIsSidebarOpen(prev => !prev)}
-        variant="outline"
-        size="icon"
-        className="absolute top-4 left-4 z-50 bg-white border border-gray-300 shadow"
-      >
-        {isSidebarOpen ? <ChevronsLeft size={20} /> : <ChevronsRight size={20} />}
-      </Button>
+    <div style={{ display: "flex", height: "100vh", background: "#f9fafb" }}>
+      {/* 왼쪽: 관심종목(Watchlist) */}
+      <div style={{ width: 320, minWidth: 260, maxWidth: 400, borderRight: "1px solid #eee", background: "white" }}>
+        <Watchlist selectedStock={selectedStock} onStockSelect={(stock) => setSelectedStock(stock)} userId={user.id} />
+      </div>
 
-      {/* ✅ 사이드바 */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        selectedMenu={selectedMenu}
-        setSelectedMenu={setSelectedMenu}
-        toggleSidebar={() => setIsSidebarOpen(prev => !prev)}
-      />
+      {/* 중앙: 본문 */}
+      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
+        <Header
+          userEmail={user.email}
+          onSelect={(code: string, name: string) => {
+            setSelectedStock({ code: code ?? "", name })
+          }}
+        />
 
-      {/* ✅ 본문 */}
-      <div className="flex-1 flex flex-col">
-        <Header userEmail={user.email} />
-
-        <main className="flex-1 overflow-y-auto p-6">
-          {selectedMenu === 'dashboard' && (
-            <div className="flex gap-6 h-full">
-              <div className="w-1/3 overflow-y-auto">
-                <Company onSelect={(code, name) => {
-                  setCode(code)
-                  setCompanyName(name)
-                }} />
+        <div style={{ flex: 1, display: "flex" }}>
+          {/* 메인 차트 영역 */}
+          <div style={{ flex: 1, padding: "24px" }}>
+            {selectedMenu === "dashboard" && (
+              <div style={{ width: "100%", height: "100%" }}>
+                {selectedStock.code ? (
+                  <CombinedChart code={selectedStock.code} companyName={selectedStock.name} />
+                ) : (
+                  <div
+                    style={{
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      background: "#fafbfc",
+                      border: "1px solid #eee",
+                      borderRadius: 12,
+                      color: "#999",
+                    }}
+                  >
+                    종목을 선택해주세요.
+                  </div>
+                )}
               </div>
-              <div className="flex-1 overflow-hidden">
-                <FinancialTable
-                  code={code}
-                  companyName={companyName}
-                  setCode={setCode}
-                  setCompanyName={setCompanyName}
+            )}
+
+            {selectedMenu === "stockchart" && (
+              <div>
+                <Financial
+                  companyName={selectedStock.name}
+                  setCompanyName={(name) => setSelectedStock((prev) => ({ ...prev, name }))}
+                  code={selectedStock.code}
+                  setCode={(code) => setSelectedStock((prev) => ({ ...prev, code: code ?? "" }))}
+                  days={days}
+                  setDays={setDays}
                 />
+                {selectedStock.code && (
+                  <div style={{ marginTop: "32px" }}>
+                    <MaChart code={selectedStock.code} companyName={selectedStock.name} />
+                    <CandleChart code={selectedStock.code} companyName={selectedStock.name} />
+                    <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
+                    <ProfitCalculator code={selectedStock.code} companyName={selectedStock.name} />
+                    <FinancialTable />
+                  </div>
+                )}
+                {!selectedStock.code && <p>종목을 먼저 검색해주세요.</p>}
               </div>
-            </div>
-          )}
+            )}
+          </div>
 
-          {selectedMenu === 'stockchart' && (
-            <div>
-              <Financial
-                companyName={companyName}
-                setCompanyName={setCompanyName}
-                code={code}
-                setCode={setCode}
-                days={days}
-                setDays={setDays}
-              />
-              {code ? (
-                <div className="mt-8">
-                  <MaChart code={code} companyName={companyName} />
-                  <CandleChart code={code} companyName={companyName} />
-                  <RSIChart code={code} companyName={companyName} />
-                  <ProfitCalculator code={code} companyName={companyName} />
-                </div>
-              ) : (
-                <p>종목을 먼저 검색해주세요.</p>
-              )}
-            </div>
-          )}
-        </main>
+          {/* 오른쪽: 호가창 */}
+          <div style={{ width: 350, minWidth: 300, maxWidth: 400, borderLeft: "1px solid #eee", background: "white" }}>
+            {selectedStock.code ? (
+              <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
+            ) : (
+              <div
+                style={{
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "#999",
+                  textAlign: "center",
+                  padding: "20px",
+                }}
+              >
+                종목을 선택하면
+                <br />
+                호가 정보를 확인할 수 있습니다.
+              </div>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   )

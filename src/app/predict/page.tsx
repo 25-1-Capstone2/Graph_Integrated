@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import Header from "./Header"
+import Header from "@/app/main/Header"
 import Watchlist from "@/app/components/Watchlist"
 import PredictionResult from "@/app/components/PredictionResult"
 import FactorFilterPanel from "@/app/components/FactorFilterPanel"
