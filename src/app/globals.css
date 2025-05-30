@@ -9,7 +9,13 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@layer base{
+body {
+  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+}
+
+
+
+@layer base {
   :root {
     --background: 0 0% 100%;
     --foreground: 0 0% 3.9%;
@@ -65,16 +71,14 @@
   }
 }
 
-html,
-body,
-#__next {
-  height: 100%;         /* ✅ 전체 높이 채우기 */
-  margin: 0;            /* ✅ 기본 여백 제거 */
-  padding: 0;
-}
 
-body {
-  font-family: var(--font-sans), Arial, Helvetica, sans-serif;
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
 }
 
 

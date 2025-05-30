@@ -36,7 +36,7 @@ export default function Company({ onSelect }: Props) {
   )
 
   return (
-    <div className="p-6 w-full max-w-md h-full flex flex-col">
+    <div className="p-6 w-full max-w-md">
       <h2 className="text-xl font-bold mb-4">KRX 300 기준 종목 목록</h2>
 
       <input
@@ -47,8 +47,8 @@ export default function Company({ onSelect }: Props) {
         className="w-full border border-gray-300 rounded-md px-4 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
       />
 
-      {/* ✅ 여기만 스크롤되도록 */}
-      <div className="flex-1 overflow-y-auto pr-1 space-y-2">
+
+      <div className="h-[calc(100vh-250px)] overflow-y-auto pr-1 space-y-2">
         {filtered.map((company) => (
           <div
             key={company.code}
