@@ -1,10 +1,12 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Header from "@/app/main/Header"
 import Watchlist from "@/app/components/Watchlist"
 import PredictionResult from "@/app/components/predict/PredictionResult"
 import FactorFilterPanel from "@/app/components/predict/FactorFilterPanel"
+import supabase from "../../lib/supabase"
+import { useRouter } from "next/navigation"
 
 const PredictModelPage = () => {
   const [user, setUser] = useState<any>(null)
@@ -13,6 +15,24 @@ const PredictModelPage = () => {
     name: "삼성전자",
   })
   const [selectedFactors, setSelectedFactors] = useState<string[]>([])
+  const router = useRouter()
+
+  // 로그인 세션 체크
+  useEffect(() => {
+    const fetchSession = async () => {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        router.push("/login")
+      } else {
+        setUser(session.user)
+      }
+    }
+    fetchSession()
+  }, [router])
+
+  if (!user) return null
 
   return (
     <div style={{ display: "flex", height: "100vh", background: "#f9fafb" }}>
