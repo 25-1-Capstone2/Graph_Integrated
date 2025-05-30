@@ -3,8 +3,8 @@
 import { useState } from "react"
 import Header from "@/app/main/Header"
 import Watchlist from "@/app/components/Watchlist"
-import PredictionResult from "@/app/components/PredictionResult"
-import FactorFilterPanel from "@/app/components/FactorFilterPanel"
+import PredictionResult from "@/app/components/predict/PredictionResult"
+import FactorFilterPanel from "@/app/components/predict/FactorFilterPanel"
 
 const PredictModelPage = () => {
   const [user, setUser] = useState<any>(null)
