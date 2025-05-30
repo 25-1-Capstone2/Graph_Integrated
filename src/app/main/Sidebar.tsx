@@ -25,9 +25,8 @@ const Sidebar = ({ isOpen, selectedMenu, setSelectedMenu }: SidebarProps) => {
       } overflow-hidden relative`}
     >
       <div className={`p-6 ${!isOpen && 'hidden'}`}>
-        <h2 className="text-xl font-bold mb-6"></h2>
-
-        <nav className="flex flex-col gap-1.5">
+        {/* 메뉴 전체 위치를 박스 기준 아래로 내리기 */}
+        <nav className="flex flex-col gap-1.5 mt-[80px]">
           {menuItems.map((item) => (
             <Button
               key={item.key}
