@@ -15,9 +15,11 @@ numpy==2.2.6
 packaging==25.0
 pandas==2.2.3
 plotly==6.1.0
+pycryptodome==3.23.0
 pydantic==2.11.4
 pydantic_core==2.33.2
 python-dateutil==2.9.0.post0
+python-dotenv==1.1.0
 pytz==2025.2
 PyYAML==6.0.2
 requests==2.32.3
@@ -32,3 +34,4 @@ typing_extensions==4.13.2
 tzdata==2025.2
 urllib3==2.4.0
 uvicorn==0.34.2
+websockets==15.0.1

@@ -29,7 +29,7 @@ export default function FactorFilterPanel({ selectedFactors, setSelectedFactors 
 
   return (
     <div>
-      <h2 className="text-lg font-semibold mb-4">📊 가치 팩터 선택</h2>
+      <h2 className="text-lg font-semibold mb-4">가치 팩터 선택</h2>
       <div className="flex flex-col gap-3">
         {FACTOR_LIST.map((factor) => (
           <label key={factor} className="flex items-center gap-2 cursor-pointer">

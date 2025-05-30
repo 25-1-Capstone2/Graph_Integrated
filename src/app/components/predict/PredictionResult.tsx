@@ -21,7 +21,7 @@ export default function PredictionResult({ selectedFactors, stock }: Props) {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-xl font-bold">🔮 예측 결과</h2>
+      <h2 className="text-xl font-bold">예측 결과</h2>
 
       <div className="bg-white rounded-xl shadow p-6 border border-gray-200">
         <h3 className="text-lg font-semibold mb-2">종목: {stock.name} ({stock.code})</h3>
