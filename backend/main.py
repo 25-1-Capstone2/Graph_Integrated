@@ -103,6 +103,8 @@ async def websocket_endpoint(websocket: WebSocket, code: str = Query(...)):
         print(f"[WebSocket] 클라이언트 연결 종료({code})")
     except Exception as e:
         print(f"에러: {e}")
+        # 백엔드는 ws 끊길 때도 예외 안 던지고 그냥 종료
+        await websocket.send_json({"type": "error", "msg": "실시간 데이터 미제공(장마감/오류)"})
         await websocket.close()
 
 # ✅ 종목명 → 코드 변환
@@ -120,7 +122,7 @@ def get_token() -> str:
     kis_auth("prod")
     return getTREnv().my_token.replace("Bearer ", "")
 
-# ✅ 실시간 시세 조회
+# ✅ 실시간 시세 조회, 등락률
 def get_stock_price(code: str) -> Dict[str, str]:
     token = get_token()
     env = getTREnv()
@@ -134,12 +136,16 @@ def get_stock_price(code: str) -> Dict[str, str]:
     url = f"{env.my_url}/uapi/domestic-stock/v1/quotations/inquire-price"
     res = requests.get(url, headers=headers, params=params)
     data = res.json()
-    if "output" not in data or "stck_prpr" not in data["output"]:
-        raise ValueError(f"응답 오류: {data}")
+    output = data.get("output", {})
     return {
-        "price": int(data["output"]["stck_prpr"]),
+        "price": int(output.get("stck_prpr", 0)),
+        "diff": int(output.get("prdy_vrss", 0)),
+        "diff_rate": float(output.get("prdy_ctrt", 0)),
+        "prev_close": int(output.get("stck_clpr", 0)),
         "time": datetime.datetime.now().strftime("%H:%M:%S")
     }
+
+
 
 
 
@@ -375,3 +381,52 @@ def orderbook(code: str):
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+
+def parse_price_tick(data):
+    recv = data.split('^')
+    return {
+        "price": int(recv[2]),  # 현재가
+        "diff": int(recv[4]),   # 전일대비
+        "diff_rate": float(recv[5]),  # 전일대비율 (%)
+    }
+
+@app.websocket("/ws/price")
+async def price_ws(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        query = websocket.query_params
+        code = query.get("code")
+        if not code:
+            await websocket.close()
+            return
+        approval_key = get_approval(APP_KEY, APP_SECRET)
+        import websockets  # import here for async
+        async with websockets.connect(WS_URL, ping_interval=None) as kis_ws:
+            senddata = {
+                "header": {
+                    "approval_key": approval_key,
+                    "custtype": CUST_TYPE,
+                    "tr_type": "1",
+                    "content-type": "utf-8"
+                },
+                "body": {
+                    "input": {
+                        "tr_id": "H0STCNT0",
+                        "tr_key": code
+                    }
+                }
+            }
+            await kis_ws.send(json.dumps(senddata))
+            while True:
+                data = await kis_ws.recv()
+                if data[0] == '0':
+                    recvstr = data.split('|')
+                    trid0 = recvstr[1]
+                    if trid0 == "H0STCNT0":
+                        tick = parse_price_tick(recvstr[3])
+                        await websocket.send_json(tick)
+    except WebSocketDisconnect:
+        print(f"[WebSocket] 가격 ws 클라이언트 종료({code})")
+    except Exception as e:
+        print(f"WS price 에러: {e}")
+        await websocket.close()

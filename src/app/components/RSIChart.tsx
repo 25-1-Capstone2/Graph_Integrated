@@ -54,7 +54,7 @@ export default function RSIChart({ code, companyName }: Props) {
   const rsi = data.map((d) => d.RSI ?? null)
 
   const layout: Partial<Layout> = {
-    title: { text: `${companyName} - RSI (14일)` },
+    title: { text: `${companyName} - RSI` },
     xaxis: { title: { text: '날짜' } },
     yaxis: {
       title: { text: 'RSI 값' },

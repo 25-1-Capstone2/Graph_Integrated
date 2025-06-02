@@ -5,19 +5,20 @@ import supabase from "../../lib/supabase"
 import { useRouter } from "next/navigation"
 import Header from "./Header"
 import Watchlist from "@/app/components/Watchlist"
-import FinancialTable from "./Financial"
 import ProfitCalculator from "@/app/components/ProfitCalculator"
-import MaChart from "@/app/components/MaChart"
-import CandleChart from "@/app/components/CandleChart"
 import RSIChart from "@/app/components/RSIChart"
-import Financial from "./Financials"
 import CombinedChart from '@/app/components/Company_Chart'
 import OrderBook from "@/app/components/OrderBook"
+import SummaryTable from "@/app/components/SummaryTable"
 
-type Stock = {
-  code: string
-  name: string
-}
+type Stock = { code: string; name: string }
+
+const chartTabs = [
+  { key: "combined", label: "차트" },
+  { key: "rsi", label: "RSI" },
+  { key: "profit", label: "수익률" },
+  // 필요시 더 추가 가능
+]
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -27,14 +28,13 @@ const Home = () => {
   })
   const [selectedMenu, setSelectedMenu] = useState("dashboard")
   const [days, setDays] = useState<number>(3)
+  const [selectedTab, setSelectedTab] = useState<string>("combined")  // << 탭 관리
   const router = useRouter()
 
   // 로그인 세션 체크
   useEffect(() => {
     const fetchSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push("/login")
       } else {
@@ -64,58 +64,81 @@ const Home = () => {
 
         <div style={{ flex: 1, display: "flex" }}>
           {/* 메인 차트 영역 */}
-          <div style={{ flex: 1, padding: "24px" }}>
-            {selectedMenu === "dashboard" && (
-              <div style={{ width: "100%", height: "100%" }}>
-                {selectedStock.code ? (
-                  <CombinedChart code={selectedStock.code} companyName={selectedStock.name} />
-                ) : (
-                  <div
-                    style={{
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "#fafbfc",
-                      border: "1px solid #eee",
-                      borderRadius: 12,
-                      color: "#999",
-                    }}
-                  >
-                    종목을 선택해주세요.
-                  </div>
-                )}
-              </div>
-            )}
+          <div style={{ flex: 1, padding: "24px", display: "flex", flexDirection: "column" }}>
+            {/* === 탭 버튼 영역 === */}
+            <div style={{ display: "flex", gap: 12, marginBottom: 16 }}>
+              {chartTabs.map(tab => (
+                <button
+                  key={tab.key}
+                  onClick={() => setSelectedTab(tab.key)}
+                  style={{
+                    padding: "8px 24px",
+                    borderRadius: 6,
+                    border: "none",
+                    fontWeight: "bold",
+                    fontSize: 16,
+                    background: selectedTab === tab.key ? "#2563eb" : "#f3f4f6",
+                    color: selectedTab === tab.key ? "white" : "#374151",
+                    cursor: "pointer",
+                    transition: "all 0.15s"
+                  }}
+                >
+                  {tab.label}
+                </button>
+              ))}
+            </div>
 
-            {selectedMenu === "stockchart" && (
-              <div>
-                <Financial
-                  companyName={selectedStock.name}
-                  setCompanyName={(name) => setSelectedStock((prev) => ({ ...prev, name }))}
-                  code={selectedStock.code}
-                  setCode={(code) => setSelectedStock((prev) => ({ ...prev, code: code ?? "" }))}
-                  days={days}
-                  setDays={setDays}
-                />
-                {selectedStock.code && (
-                  <div style={{ marginTop: "32px" }}>
-                    <MaChart code={selectedStock.code} companyName={selectedStock.name} />
-                    <CandleChart code={selectedStock.code} companyName={selectedStock.name} />
-                    <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
-                    <ProfitCalculator code={selectedStock.code} companyName={selectedStock.name} />
-                    <FinancialTable />
-                  </div>
-                )}
-                {!selectedStock.code && <p>종목을 먼저 검색해주세요.</p>}
-              </div>
-            )}
+            {/* === 각 탭 내용 === */}
+            <div style={{ flex: 1, minHeight: 0 }}>
+              {selectedTab === "combined" && (
+                selectedStock.code
+                  ? <CombinedChart code={selectedStock.code} companyName={selectedStock.name} />
+                  : <div style={{
+                      height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "#fafbfc", border: "1px solid #eee", borderRadius: 12, color: "#999",
+                    }}>
+                      종목을 선택해주세요.
+                    </div>
+              )}
+              {selectedTab === "rsi" && (
+                selectedStock.code
+                  ? <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
+                  : <div style={{
+                      height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "#fafbfc", border: "1px solid #eee", borderRadius: 12, color: "#999",
+                    }}>
+                      종목을 선택해주세요.
+                    </div>
+              )}
+              {selectedTab === "profit" && (
+                selectedStock.code
+                  ? <ProfitCalculator code={selectedStock.code} companyName={selectedStock.name} />
+                  : <div style={{
+                      height: "100%", display: "flex", alignItems: "center", justifyContent: "center",
+                      background: "#fafbfc", border: "1px solid #eee", borderRadius: 12, color: "#999",
+                    }}>
+                      종목을 선택해주세요.
+                    </div>
+              )}
+            </div>
           </div>
 
-          {/* 오른쪽: 호가창 */}
-          <div style={{ width: 350, minWidth: 300, maxWidth: 400, borderLeft: "1px solid #eee", background: "white" }}>
+          {/* 오른쪽: 실시간 호가 + 단기 시세 요약 */}
+          <div
+            style={{
+              width: 300,
+              minWidth: 300,
+              maxWidth: 350,
+              display: "flex",
+              flexDirection: "column",
+              gap: 1, // 카드 간 여백만!
+            }}
+          >
             {selectedStock.code ? (
-              <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
+              <>
+                <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
+                <SummaryTable code={selectedStock.code} days={3} />
+              </>
             ) : (
               <div
                 style={{
@@ -128,9 +151,7 @@ const Home = () => {
                   padding: "20px",
                 }}
               >
-                종목을 선택하면
-                <br />
-                호가 정보를 확인할 수 있습니다.
+                종목을 선택하면<br />호가 정보를 확인할 수 있습니다.
               </div>
             )}
           </div>
