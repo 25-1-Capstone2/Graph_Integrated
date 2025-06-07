@@ -54,13 +54,13 @@ export default function FactorFilterPanel({ selectedFactors, setSelectedFactors 
   }
 
   return (
-    <div>
-      <h2 className="text-lg font-semibold mb-4">팩터 설정</h2>
+    <div className="p-4 sm:p-6 max-h-[90vh] overflow-y-auto">
+      <h2 className="text-base sm:text-lg font-semibold mb-4">팩터 설정</h2>
       <div className="flex flex-col gap-6">
         {FACTOR_GROUPS.map((group) => (
           <div key={group.category}>
-            <h3 className="text-md font-bold mb-2">{group.category}</h3>
-            <div className="grid grid-cols-2 gap-2">
+            <h3 className="text-sm sm:text-base font-bold mb-2">{group.category}</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {group.factors.map((factor) => (
                 <label key={factor} className="flex items-center gap-2 cursor-pointer">
                   <input
@@ -92,16 +92,16 @@ export default function FactorFilterPanel({ selectedFactors, setSelectedFactors 
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
                 placeholder="팩터명"
-                className="border rounded px-2 py-1 text-sm"
+                className="border rounded px-2 py-1 text-sm w-full"
               />
               <input
                 type="text"
                 value={customDesc}
                 onChange={(e) => setCustomDesc(e.target.value)}
                 placeholder="수식 또는 설명 (선택)"
-                className="border rounded px-2 py-1 text-sm"
+                className="border rounded px-2 py-1 text-sm w-full"
               />
-              <div className="flex gap-2">
+              <div className="flex flex-col sm:flex-row gap-2">
                 <button
                   onClick={addCustomFactor}
                   className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
