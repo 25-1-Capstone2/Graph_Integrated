@@ -1,59 +1,69 @@
 import * as React from "react"
 
-import { cn } from "@/lib/utils"
+// Card 컴포넌트
+export function Card({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={`rounded-2xl border bg-white shadow ${className}`}
+      {...props}
+    />
+  )
+}
 
-const Card = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn(
-      "rounded-2xl border bg-white text-black shadow-sm",
-      className
-    )}
-    {...props}
-  />
-))
-Card.displayName = "Card"
+// CardHeader 컴포넌트
+export function CardHeader({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={`border-b px-6 py-4 ${className}`}
+      {...props}
+    />
+  )
+}
 
-const CardHeader = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("flex flex-col gap-1 px-6 pt-6 pb-2", className)}
-    {...props}
-  />
-))
-CardHeader.displayName = "CardHeader"
+// CardTitle 컴포넌트
+export function CardTitle({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLHeadingElement>) {
+  return (
+    <h3
+      className={`text-lg font-semibold ${className}`}
+      {...props}
+    />
+  )
+}
 
-const CardTitle = React.forwardRef<
-  HTMLParagraphElement,
-  React.HTMLAttributes<HTMLHeadingElement>
->(({ className, ...props }, ref) => (
-  <h3
-    ref={ref}
-    className={cn(
-      "text-lg font-semibold leading-tight tracking-tight",
-      className
-    )}
-    {...props}
-  />
-))
-CardTitle.displayName = "CardTitle"
+// CardDescription 컴포넌트
+export function CardDescription({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLParagraphElement>) {
+  return (
+    <p
+      className={`text-sm text-gray-500 ${className}`}
+      {...props}
+    />
+  )
+}
 
-const CardContent = React.forwardRef<
-  HTMLDivElement,
-  React.HTMLAttributes<HTMLDivElement>
->(({ className, ...props }, ref) => (
-  <div
-    ref={ref}
-    className={cn("px-6 pb-6 pt-2", className)}
-    {...props}
-  />
-))
-CardContent.displayName = "CardContent"
+// CardContent 컴포넌트
+export function CardContent({
+  className = "",
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
+  return (
+    <div
+      className={`px-6 py-4 ${className}`}
+      {...props}
+    />
+  )
+}
 
-export { Card, CardHeader, CardTitle, CardContent }
+// 기본 Card export (optional)
+export default Card

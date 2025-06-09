@@ -58,7 +58,8 @@ export default function RSIChart({ code, companyName }: Props) {
     xaxis: { title: { text: '날짜' } },
     yaxis: {
       title: { text: 'RSI 값' },
-      range: [0, 100]
+      range: [0, 100],
+      side: "right", // ✅ 추가!
     },
     shapes: [
       {

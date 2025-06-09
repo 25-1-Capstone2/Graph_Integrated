@@ -1,3 +1,4 @@
+// Watchlist.tsx
 'use client'
 
 import { useEffect, useState } from "react"
@@ -12,16 +13,23 @@ type Props = {
   selectedStock: Stock
   onStockSelect: (stock: Stock) => void
   userId: string
+  priceMap: Record<string, PriceTick>
+  setPriceMap: React.Dispatch<React.SetStateAction<Record<string, PriceTick>>>
 }
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
 
-export default function Watchlist({ selectedStock, onStockSelect, userId }: Props) {
+export default function Watchlist({
+  selectedStock,
+  onStockSelect,
+  userId,
+  priceMap,
+  setPriceMap,
+}: Props) {
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Stock[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [priceMap, setPriceMap] = useState<Record<string, PriceTick>>({})
 
   // 전체 종목 (실제론 fetch 대체)
   const allStocks: Stock[] = [
@@ -127,12 +135,12 @@ export default function Watchlist({ selectedStock, onStockSelect, userId }: Prop
           results[stock.code] = null
         }
       }))
-      setPriceMap(results)
+      setPriceMap(results)   // 반드시 prop의 setPriceMap 호출!
     }
     fetchPrices()
     timer = setInterval(fetchPrices, 5000)
     return () => clearInterval(timer)
-  }, [watchlist])
+  }, [watchlist, setPriceMap])
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">

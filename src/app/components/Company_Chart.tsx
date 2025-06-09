@@ -144,8 +144,9 @@ export default function CombinedChart({ code, companyName }: Props) {
       zeroline: false,
       tickfont: { size: 10, color: "#6b7280" },
       tickformat: ",.0f",
+      side: "right", // ✅ 오른쪽 y축
     },
-    margin: { t: 60, l: 80, r: 40, b: 60 },
+    margin: { t: 60, l: 20, r: 80, b: 60 }, // ✅ 왼쪽 최소, 오른쪽 넉넉
     plot_bgcolor: "rgba(0,0,0,0)",
     paper_bgcolor: "rgba(0,0,0,0)",
     font: { family: "Inter, system-ui, sans-serif" },
