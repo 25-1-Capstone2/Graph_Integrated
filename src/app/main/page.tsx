@@ -23,6 +23,7 @@ import {
   Search,
   Bell,
   User,
+  BrainCircuit,
 } from "lucide-react"
 import { Card, CardContent } from "../components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -272,11 +273,21 @@ const Home = () => {
             </div>
           </div>
           <div className="flex items-center gap-3 ml-6">
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
-              <Bell className="h-5 w-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-slate-400 hover:text-emerald-400 rounded-none"
+              onClick={() => router.push("/")}
+            >
+              <BarChart3 className="h-5 w-5" />
             </Button>
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
-              <Settings className="h-5 w-5" />
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-slate-400 hover:text-emerald-400 rounded-none"
+              onClick={() => router.push("/predict")}
+            >
+              <BrainCircuit className="h-5 w-5" />
             </Button>
           </div>
         </div>
