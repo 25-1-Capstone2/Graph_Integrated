@@ -41,6 +41,9 @@ const chartTabs = [
 
 const HEADER_HEIGHT = "h-20" // 80px
 
+// 🔵 검색창 오른쪽 이동 조절 변수 (값을 바꿔보세요!)
+const SEARCH_MARGIN_LEFT = 450 // px
+
 const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [selectedStock, setSelectedStock] = useState<Stock>({
@@ -163,10 +166,6 @@ const Home = () => {
       return <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
     }
     if (selectedTab === "market") {
-      // <div className="flex justify-center items-center h-full w-full">
-      //   <MarketSummaryWidget />
-      // </div>
-      // **위 코드 대신 바로 컴포넌트만 반환**
       return <MarketSummaryWidget />
     }
     return null
@@ -235,8 +234,10 @@ const Home = () => {
         {/* 메인 헤더 */}
         <div className={`border-b border-slate-200 bg-white flex items-center justify-between px-8 z-10 ${HEADER_HEIGHT}`}>
           {/* 중앙 검색 */}
-          <div className="flex-1 flex items-center" ref={searchWrapperRef}
-            style={{ marginLeft: "350px" }}
+          <div
+            className="flex-1 flex items-center"
+            ref={searchWrapperRef}
+            style={{ marginLeft: `${SEARCH_MARGIN_LEFT}px` }} // <<== 여기 값만 바꾸면 검색창 위치 조정!
           >
             <div className="relative w-full max-w-lg">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
@@ -373,9 +374,7 @@ const Home = () => {
             {selectedStock.code ? (
               <>
                 <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
-                {/* Divider 추가 */}
                 <hr className="my-2 border-t border-gray-200" />
-                <SummaryTable code={selectedStock.code} days={3} />
               </>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6">

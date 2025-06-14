@@ -1,16 +1,16 @@
+// /api/market-summary/route.ts
 import axios from "axios";
 
-type MarketItem = {
-  key: string;
-  name: string;
-  symbol: string;
-};
-
-const ITEMS: MarketItem[] = [
-  { key: "kospi",   name: "코스피",   symbol: "^KS11" },
-  { key: "kosdaq",  name: "코스닥",  symbol: "^KQ11" },
-  { key: "nasdaq",  name: "나스닥",  symbol: "^IXIC" },
-  { key: "usdkrw",  name: "달러/원", symbol: "KRW=X" }
+const YAHOO_SYMBOLS: { key: string; name: string; symbol: string }[] = [
+  { key: "kospi", name: "코스피", symbol: "^KS11" },
+  { key: "kosdaq", name: "코스닥", symbol: "^KQ11" },
+  { key: "nasdaq", name: "나스닥", symbol: "^IXIC" },
+  { key: "usdkrw", name: "달러/원", symbol: "USDKRW=X" },
+  { key: "sp500", name: "S&P500", symbol: "^GSPC" },
+  { key: "dji", name: "다우존스", symbol: "^DJI" },
+  { key: "jpkrw", name: "엔/원", symbol: "JPYKRW=X" },
+  { key: "cnykrw", name: "위안/원", symbol: "CNYKRW=X" },
+  { key: "eurkrw", name: "유로/원", symbol: "EURKRW=X" },
 ];
 
 async function fetchYahoo(symbol: string) {
@@ -20,39 +20,32 @@ async function fetchYahoo(symbol: string) {
   const price = result?.meta?.regularMarketPrice;
   const prev = result?.meta?.chartPreviousClose;
   const diff = price - prev;
-  const rate = ((diff / prev) * 100);
+  const rate = ((diff / prev) * 100).toFixed(2);
   return {
     value: price?.toLocaleString() ?? "-",
     changeValue: (diff > 0 ? "+" : "") + diff.toFixed(2),
-    changeRate: (diff > 0 ? "+" : "") + rate.toFixed(2) + "%",
-    isUp: diff >= 0
-  }
+    changeRate: (diff > 0 ? "+" : "") + rate + "%",
+    isUp: diff >= 0,
+  };
 }
 
 export async function GET() {
-  // 4개 모두 야후에서 fetch
-  const result = await Promise.all(ITEMS.map(async (item) => {
-    try {
-      const data = await fetchYahoo(item.symbol);
-      return {
-        key: item.key,
-        name: item.name,
-        value: data.value,
-        changeValue: data.changeValue,
-        changeRate: data.changeRate,
-        isUp: data.isUp
-      };
-    } catch (e) {
-      return {
-        key: item.key,
-        name: item.name,
-        value: "-",
-        changeValue: "0",
-        changeRate: "0%",
-        isUp: true
-      };
-    }
-  }));
-
-  return new Response(JSON.stringify(result), { status: 200 });
+  const data = await Promise.all(
+    YAHOO_SYMBOLS.map(async ({ key, name, symbol }) => {
+      try {
+        const d = await fetchYahoo(symbol);
+        return {
+          key,
+          name,
+          value: d.value,
+          changeValue: d.changeValue,
+          changeRate: d.changeRate,
+          isUp: d.isUp,
+        };
+      } catch {
+        return { key, name, value: "-", changeValue: "-", changeRate: "-", isUp: null };
+      }
+    })
+  );
+  return new Response(JSON.stringify(data), { status: 200 });
 }

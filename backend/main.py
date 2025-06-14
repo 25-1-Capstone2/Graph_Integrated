@@ -177,9 +177,9 @@ def get_summary_days(code: str, days: int) -> pd.DataFrame:
     df.columns = ["날짜", "시가", "고가", "저가", "종가", "전일대비", "등락률(%)", "거래량", "거래대금"]
     return df
 
-# ✅ 봉차트용 데이터 (최근 6개월)
+# ✅ 봉차트용 데이터 (최근 1년으로 수정)
 def get_candle_data(code: str) -> pd.DataFrame:
-    df = fdr.DataReader(code, datetime.datetime.today() - datetime.timedelta(days=180))
+    df = fdr.DataReader(code, datetime.datetime.today() - datetime.timedelta(days=365))
     df.reset_index(inplace=True)
     return df
 
@@ -206,7 +206,9 @@ def get_summary(code: str) -> dict:
     import requests
     from bs4 import BeautifulSoup
     import FinanceDataReader as fdr
+    import os
 
+    DART_API_KEY = os.getenv("DART_API_KEY")
     info_df = fdr.StockListing('KRX')
     info_df.columns = [c.lower() for c in info_df.columns]
     row = info_df[info_df['code'] == code].iloc[0]
@@ -214,24 +216,60 @@ def get_summary(code: str) -> dict:
     market_cap = int(row['marcap']) if 'marcap' in row and not pd.isna(row['marcap']) else 0
     stocks = int(row['stocks']) if 'stocks' in row and not pd.isna(row['stocks']) else 0
 
-    # 2. 기업 개요(네이버 금융 크롤링)
     desc = ""
     foreign_rate = "-"
-    industry_rank = "-"
-    biz_sector = "-"
     highest_52 = "-"
     lowest_52 = "-"
+    per = "-"
+    pbr = "-"
+    dividend_yield = "-"
+    ceo = "-"
+    founded = "-"
+    fiscal = "-"
+    corp_code = None
 
+    # 1. DART 회사목록에서 corp_code 찾기
+    try:
+        if not os.path.exists("dart_company_list.csv"):
+            url = f"https://opendart.fss.or.kr/api/corpCode.xml?crtfc_key={DART_API_KEY}"
+            r = requests.get(url)
+            with open("corpCode.zip", "wb") as f:
+                f.write(r.content)
+            import zipfile
+            with zipfile.ZipFile("corpCode.zip") as z:
+                z.extractall()
+            import xml.etree.ElementTree as ET
+            tree = ET.parse("CORPCODE.xml")
+            root = tree.getroot()
+            rows = []
+            for row in root.iter("list"):
+                rows.append({
+                    "corp_code": row.find("corp_code").text,
+                    "corp_name": row.find("corp_name").text,
+                    "stock_code": row.find("stock_code").text
+                })
+            dart_df = pd.DataFrame(rows)
+            dart_df.to_csv("dart_company_list.csv", index=False)
+        else:
+            dart_df = pd.read_csv("dart_company_list.csv", dtype=str)
+
+        corp_row = dart_df[dart_df["stock_code"] == code]
+        if not corp_row.empty:
+            corp_code = corp_row.iloc[0]["corp_code"]
+    except Exception as e:
+        print("DART corp_code 에러:", e)
+
+    # 2. 네이버 금융 크롤링 (보조지표용)
     try:
         url = f"https://finance.naver.com/item/main.nhn?code={code}"
         r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         soup = BeautifulSoup(r.text, "lxml")
+
         # 기업 설명
         summary = soup.select_one('.description')
         if summary:
             desc = summary.text.strip()
-
-        # 🟢 외국인비율
+        # 외국인비율
         fr_elem = soup.select_one("div.rate_info__item--foreigner .rate_info__value")
         if fr_elem:
             foreign_rate = fr_elem.text.strip()
@@ -241,8 +279,7 @@ def get_summary(code: str) -> dict:
                 td = txt.parent.find_next("td")
                 if td:
                     foreign_rate = td.text.strip()
-
-        # 🟢 52주 최고/최저
+        # 52주 최고/최저
         rate_table = soup.find("table", class_="rate_table")
         if rate_table:
             ths = rate_table.find_all("th")
@@ -255,12 +292,41 @@ def get_summary(code: str) -> dict:
                     td = th.find_next_sibling("td")
                     if td:
                         lowest_52 = td.text.strip()
-        # 필요시 업종내 순위, 사업분야도 이처럼 추가 크롤링 가능
-
+        # 투자지표 테이블
+        indicator_table = soup.find("table", class_="per_table")
+        if indicator_table:
+            for tr in indicator_table.find_all("tr"):
+                th = tr.find("th")
+                tds = tr.find_all("td")
+                if th and tds:
+                    label = th.text.strip()
+                    if "PER" in label:
+                        per = tds[0].text.strip()
+                    elif "PBR" in label:
+                        pbr = tds[0].text.strip()
+                    elif "배당수익률" in label:
+                        dividend_yield = tds[0].text.strip()
     except Exception as e:
         print("네이버금융 크롤링 에러:", e)
 
-    # 3. 최근 연간 실적(매출/영업/순이익) - 네이버 재무제표
+    # 3. DART에서 대표자, 설립연도, 결산기준
+    if corp_code and DART_API_KEY:
+        try:
+            url = f"https://opendart.fss.or.kr/api/company.json?crtfc_key={DART_API_KEY}&corp_code={corp_code}"
+            r = requests.get(url)
+            result = r.json()
+            if result.get("status") == "000":
+                ceo = result.get("ceo_nm", "-")
+                founded = result.get("est_dt", "-")
+                fiscal = result.get("acc_mt", "-")
+                if founded and founded != "-":
+                    founded = f"{founded[:4]}-{founded[4:6]}-{founded[6:]}"
+                if fiscal and fiscal != "-":
+                    fiscal = f"{fiscal}월"
+        except Exception as e:
+            print("DART 기업개요 에러:", e)
+
+    # 4. 최근 연간 실적(매출/영업/순이익) - 네이버 재무제표
     revenue_series = []
     recent_revenue = recent_op_profit = recent_net_profit = 0
     try:
@@ -279,7 +345,6 @@ def get_summary(code: str) -> dict:
                     "op": op,
                     "net": net,
                 })
-            # 가장 최근 연도 값(마지막)
             if revenue_series:
                 recent = revenue_series[-1]
                 recent_revenue = recent["revenue"]
@@ -291,18 +356,25 @@ def get_summary(code: str) -> dict:
     return {
         "name": name,
         "marketCap": f"{market_cap:,}원",
-        "industryRank": industry_rank,
         "stocks": f"{stocks:,}주",
         "foreignRate": foreign_rate,
-        "bizSector": biz_sector,
         "highest52": highest_52,
         "lowest52": lowest_52,
         "recentRevenue": recent_revenue,
         "recentOpProfit": recent_op_profit,
         "recentNetProfit": recent_net_profit,
         "revenueSeries": revenue_series,
-        "desc": desc
+        "desc": desc,
+        "per": per,
+        "pbr": pbr,
+        "dividendYield": dividend_yield,
+        "ceo": ceo,
+        "founded": founded,
+        "fiscal": fiscal,
     }
+
+
+
 
 # ===============================
 # ✅ API 엔드포인트들
@@ -416,7 +488,6 @@ def orderbook(code: str):
         if "output" not in data:
             print("🔥 output 없음! 전체 응답:", data)
             return JSONResponse(status_code=500, content={"error": "한국투자증권 output 없음", "raw": data})
-
         output = data.get("output", {})
         asks = []
         bids = []
@@ -509,12 +580,6 @@ async def price_ws(websocket: WebSocket):
 @app.get("/company-summary")
 def company_summary(code: str):
     return get_summary(code)
-
-
-
-def get_token() -> str:
-    kis_auth("prod")
-    return getTREnv().my_token.replace("Bearer ", "")
 
 @app.get("/indexes")
 def get_indexes():
