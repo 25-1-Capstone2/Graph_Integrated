@@ -54,11 +54,12 @@ export default function RSIChart({ code, companyName }: Props) {
   const rsi = data.map((d) => d.RSI ?? null)
 
   const layout: Partial<Layout> = {
-    title: { text: `${companyName} - RSI (14일)` },
+    title: { text: `${companyName} - RSI` },
     xaxis: { title: { text: '날짜' } },
     yaxis: {
       title: { text: 'RSI 값' },
-      range: [0, 100]
+      range: [0, 100],
+      side: "right", // ✅ 추가!
     },
     shapes: [
       {
@@ -86,7 +87,7 @@ export default function RSIChart({ code, companyName }: Props) {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold mb-2">📉 RSI 보조지표</h2>
+      <h2 className="text-lg font-semibold mb-2"></h2>
       <Plot
         data={[
           {

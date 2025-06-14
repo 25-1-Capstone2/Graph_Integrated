@@ -58,3 +58,32 @@
     background-color: #218838;
   }
   
+  /* Toast notification customization */
+.Toastify__toast {
+  border-radius: 8px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+}
+
+.Toastify__toast--success {
+  background: linear-gradient(to right, #10b981, #059669);
+}
+
+.Toastify__toast--error {
+  background: linear-gradient(to right, #ef4444, #dc2626);
+}
+
+/* Animation for form elements */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-animate-in {
+  animation: fadeIn 0.5s ease forwards;
+}

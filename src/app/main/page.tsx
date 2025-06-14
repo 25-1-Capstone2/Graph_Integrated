@@ -1,40 +1,65 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import supabase from "../../lib/supabase"
 import { useRouter } from "next/navigation"
-import Header from "./Header"
 import Watchlist from "@/app/components/Watchlist"
-import FinancialTable from "./Financial"
 import ProfitCalculator from "@/app/components/ProfitCalculator"
-import MaChart from "@/app/components/MaChart"
-import CandleChart from "@/app/components/CandleChart"
 import RSIChart from "@/app/components/RSIChart"
-import Financial from "./Financials"
-import CombinedChart from '@/app/components/Company_Chart'
+import CombinedChart from "@/app/components/Company_Chart"
 import OrderBook from "@/app/components/OrderBook"
+import SummaryTable from "@/app/components/SummaryTable"
+import CompanySummary from "@/app/components/CompanySummary"
+import MarketSummaryWidget from "@/app/components/MarketSummaryWidget"
+import {
+  BarChart3,
+  Activity,
+  TrendingUp,
+  TrendingDown,
+  Loader2,
+  LogOut,
+  Settings,
+  ChevronRight,
+  Search,
+  Bell,
+  User,
+} from "lucide-react"
+import { Card, CardContent } from "../components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "../components/ui/tooltip"
 
-type Stock = {
-  code: string
-  name: string
-}
+type Stock = { code: string; name: string }
+type PriceTick = { price: number; diff: number; diff_rate: number } | null
+type Company = { code: string; name: string }
+
+const chartTabs = [
+  { key: "combined", label: "차트", icon: BarChart3, desc: "캔들스틱 + 이동평균선" },
+  { key: "company", label: "기업요약", icon: ChevronRight, desc: "기업 개요/실적" },
+  { key: "market", label: "지수", icon: BarChart3, desc: "주요 지수·환율" },
+  { key: "rsi", label: "RSI", icon: Activity, desc: "상대강도지수" },
+]
+
+const HEADER_HEIGHT = "h-20" // 80px
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
   const [selectedStock, setSelectedStock] = useState<Stock>({
-    code: "005930",
-    name: "삼성전자",
+    code: "005930", name: "삼성전자",
   })
-  const [selectedMenu, setSelectedMenu] = useState("dashboard")
-  const [days, setDays] = useState<number>(3)
+  const [selectedTab, setSelectedTab] = useState<string>("combined")
+  const [priceMap, setPriceMap] = useState<Record<string, PriceTick>>({})
+  const [selectedPrice, setSelectedPrice] = useState<PriceTick | null>(null)
+  const [companies, setCompanies] = useState<Company[]>([])
+  const [query, setQuery] = useState<string>("")
+  const [filtered, setFiltered] = useState<Company[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+  const searchWrapperRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  // 로그인 세션 체크
   useEffect(() => {
     const fetchSession = async () => {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession()
+      const { data: { session } } = await supabase.auth.getSession()
       if (!session) {
         router.push("/login")
       } else {
@@ -44,93 +69,320 @@ const Home = () => {
     fetchSession()
   }, [router])
 
+  useEffect(() => {
+    const fetchCompanies = async () => {
+      const res = await fetch('/api/company')
+      const json = await res.json()
+      setCompanies(json.data || [])
+    }
+    fetchCompanies()
+  }, [])
+
+  useEffect(() => {
+    if (query.trim()) {
+      setFiltered(
+        companies.filter((c) =>
+          c.name.toLowerCase().includes(query.toLowerCase()) ||
+          c.code.includes(query)
+        ).slice(0, 10)
+      )
+      setShowDropdown(true)
+    } else {
+      setFiltered([])
+      setShowDropdown(false)
+    }
+  }, [query, companies])
+
+  useEffect(() => {
+    const handleClick = (e: MouseEvent) => {
+      if (searchWrapperRef.current && !searchWrapperRef.current.contains(e.target as Node)) {
+        setShowDropdown(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  useEffect(() => {
+    if (!selectedStock.code) {
+      setSelectedPrice(null)
+      return
+    }
+    let isMounted = true
+    async function fetchSelectedPrice() {
+      if (priceMap[selectedStock.code]) {
+        setSelectedPrice(priceMap[selectedStock.code])
+        return
+      }
+      try {
+        const res = await fetch(`http://localhost:8000/price?code=${selectedStock.code}`)
+        if (!res.ok) throw new Error("fetch error")
+        const data = await res.json()
+        if (isMounted) setSelectedPrice(data)
+      } catch {
+        if (isMounted) setSelectedPrice(null)
+      }
+    }
+    fetchSelectedPrice()
+    const interval = setInterval(fetchSelectedPrice, 5000)
+    return () => {
+      isMounted = false
+      clearInterval(interval)
+    }
+  }, [selectedStock.code, priceMap])
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut()
+    router.push("/login")
+  }
+
+  const priceInfo = selectedPrice
+  const isPositive = priceInfo && priceInfo.diff > 0
+  const isZero = priceInfo && priceInfo.diff === 0
+
+  const renderTabContent = () => {
+    if (!selectedStock.code && selectedTab !== "market") {
+      return (
+        <div className="h-full flex flex-col items-center justify-center bg-white border border-dashed border-slate-200 animate-in fade-in rounded-none">
+          <BarChart3 className="w-16 h-16 text-emerald-400/40 mb-4" />
+          <h3 className="text-lg font-medium text-slate-400 mb-2">종목을 선택해주세요</h3>
+          <p className="text-sm text-slate-400 text-center">
+            왼쪽 관심종목에서 종목을 선택하거나<br />
+            상단에서 종목을 검색하세요.
+          </p>
+        </div>
+      )
+    }
+    if (selectedTab === "combined") {
+      return <CombinedChart code={selectedStock.code} companyName={selectedStock.name} />
+    }
+    if (selectedTab === "company") {
+      return <CompanySummary code={selectedStock.code} />
+    }
+    if (selectedTab === "rsi") {
+      return <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
+    }
+    if (selectedTab === "market") {
+      // <div className="flex justify-center items-center h-full w-full">
+      //   <MarketSummaryWidget />
+      // </div>
+      // **위 코드 대신 바로 컴포넌트만 반환**
+      return <MarketSummaryWidget />
+    }
+    return null
+  }
+
   if (!user) return null
 
   return (
-    <div style={{ display: "flex", height: "100vh", background: "#f9fafb" }}>
-      {/* 왼쪽: 관심종목(Watchlist) */}
-      <div style={{ width: 320, minWidth: 260, maxWidth: 400, borderRight: "1px solid #eee", background: "white" }}>
-        <Watchlist selectedStock={selectedStock} onStockSelect={(stock) => setSelectedStock(stock)} userId={user.id} />
+    <div className="flex h-screen bg-white text-slate-900 relative overflow-hidden">
+      {/* Left sidebar - Watchlist */}
+      <div className="w-80 bg-white flex flex-col">
+        {/* 사이드바 로고 헤더 */}
+        <div className={`flex items-center gap-3 px-4 border-b border-slate-200 bg-white ${HEADER_HEIGHT}`}>
+          <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 flex items-center justify-center border border-emerald-400/20 rounded-none">
+            <TrendingUp className="w-6 h-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-xl font-bold bg-gradient-to-r from-emerald-400 via-emerald-300 to-yellow-400 bg-clip-text text-transparent tracking-tight">
+              StockPredictor
+            </h1>
+            <p className="text-xs text-slate-400">스마트한 투자의 시작</p>
+          </div>
+        </div>
+        <div className="flex-1 overflow-hidden bg-white">
+          <Watchlist
+            selectedStock={selectedStock}
+            onStockSelect={setSelectedStock}
+            userId={user.id}
+            priceMap={priceMap}
+            setPriceMap={setPriceMap}
+          />
+        </div>
+        <div className="p-3 border-t border-slate-200 bg-white">
+          <div className="flex items-center justify-between p-2">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 bg-emerald-100 flex items-center justify-center rounded-none">
+                <User className="w-4 h-4 text-emerald-500" />
+              </div>
+              <div className="truncate">
+                <p className="text-sm font-medium text-slate-800 truncate">{user.email}</p>
+              </div>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-slate-400 hover:text-emerald-400 rounded-none"
+                    onClick={handleSignOut}
+                  >
+                    <LogOut className="h-4 w-4" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="top">
+                  <p>로그아웃</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        </div>
       </div>
 
-      {/* 중앙: 본문 */}
-      <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-        <Header
-          userEmail={user.email}
-          onSelect={(code: string, name: string) => {
-            setSelectedStock({ code: code ?? "", name })
-          }}
-        />
+      {/* Main content area */}
+      <div className="flex-1 flex flex-col bg-white">
+        {/* 메인 헤더 */}
+        <div className={`border-b border-slate-200 bg-white flex items-center justify-between px-8 z-10 ${HEADER_HEIGHT}`}>
+          {/* 중앙 검색 */}
+          <div className="flex-1 flex items-center" ref={searchWrapperRef}
+            style={{ marginLeft: "350px" }}
+          >
+            <div className="relative w-full max-w-lg">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
+              <input
+                type="text"
+                placeholder="종목명 or 코드 검색..."
+                value={query}
+                onChange={e => setQuery(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+                ref={searchInputRef}
+                className="w-full pl-10 pr-4 py-2 bg-gray-100 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-[16px] text-slate-900 placeholder:text-slate-400 rounded-none"
+                autoComplete="off"
+              />
+              {showDropdown && filtered.length > 0 && (
+                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 shadow-lg max-h-72 overflow-y-auto z-50 rounded-none">
+                  {filtered.map(company => (
+                    <div
+                      key={company.code}
+                      onClick={() => {
+                        setSelectedStock({ code: company.code, name: company.name })
+                        setQuery("")
+                        setShowDropdown(false)
+                        searchInputRef.current?.blur()
+                      }}
+                      className="px-4 py-2 hover:bg-blue-50 cursor-pointer border-b border-slate-100 last:border-b-0 rounded-none"
+                    >
+                      <div className="font-medium text-slate-900">{company.name}</div>
+                      <div className="text-xs text-slate-400">{company.code}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          <div className="flex items-center gap-3 ml-6">
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
+              <Bell className="h-5 w-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
+              <Settings className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
 
-        <div style={{ flex: 1, display: "flex" }}>
-          {/* 메인 차트 영역 */}
-          <div style={{ flex: 1, padding: "24px" }}>
-            {selectedMenu === "dashboard" && (
-              <div style={{ width: "100%", height: "100%" }}>
-                {selectedStock.code ? (
-                  <CombinedChart code={selectedStock.code} companyName={selectedStock.name} />
-                ) : (
-                  <div
-                    style={{
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      background: "#fafbfc",
-                      border: "1px solid #eee",
-                      borderRadius: 12,
-                      color: "#999",
-                    }}
-                  >
-                    종목을 선택해주세요.
+        {/* Main content with charts */}
+        <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+            {selectedStock.code && (
+              <Card className="mb-7 bg-white border-none rounded-none">
+                <CardContent className="p-7 flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="w-14 h-14 bg-emerald-100 flex items-center justify-center border border-emerald-200 rounded-none">
+                      <TrendingUp className="w-8 h-8 text-emerald-500" />
+                    </div>
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800">{selectedStock.name}</h2>
+                      <p className="text-md text-slate-400">{selectedStock.code}</p>
+                    </div>
                   </div>
-                )}
-              </div>
+                  <div className="text-right min-w-[160px]">
+                    {priceInfo ? (
+                      <>
+                        <div
+                          className={`text-3xl font-black leading-tight ${
+                            isZero ? "text-slate-400" : isPositive ? "text-red-500" : "text-blue-500"
+                          }`}
+                        >
+                          {priceInfo.price.toLocaleString()}원
+                        </div>
+                        <div
+                          className={`text-lg flex items-center justify-end gap-1 ${
+                            isZero ? "text-slate-400" : isPositive ? "text-red-500" : "text-blue-500"
+                          }`}
+                        >
+                          {isPositive ? <TrendingUp className="w-5 h-5" /> : isZero ? null : <TrendingDown className="w-5 h-5" />}
+                          {isPositive ? "+" : isZero ? "" : ""}
+                          {priceInfo.diff?.toLocaleString()}원 ({isPositive ? "+" : isZero ? "" : ""}
+                          {priceInfo.diff_rate?.toFixed(2)}%)
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex items-center gap-2 text-slate-400">
+                        <Loader2 className="w-5 h-5 animate-spin" /> 로딩 중
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
 
-            {selectedMenu === "stockchart" && (
-              <div>
-                <Financial
-                  companyName={selectedStock.name}
-                  setCompanyName={(name) => setSelectedStock((prev) => ({ ...prev, name }))}
-                  code={selectedStock.code}
-                  setCode={(code) => setSelectedStock((prev) => ({ ...prev, code: code ?? "" }))}
-                  days={days}
-                  setDays={setDays}
-                />
-                {selectedStock.code && (
-                  <div style={{ marginTop: "32px" }}>
-                    <MaChart code={selectedStock.code} companyName={selectedStock.name} />
-                    <CandleChart code={selectedStock.code} companyName={selectedStock.name} />
-                    <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
-                    <ProfitCalculator code={selectedStock.code} companyName={selectedStock.name} />
-                    <FinancialTable />
-                  </div>
-                )}
-                {!selectedStock.code && <p>종목을 먼저 검색해주세요.</p>}
+            <div className="mb-6">
+              {/* 차트/기업요약/지수/RSI 탭 */}
+              <div className="flex gap-2 p-1 bg-white border border-slate-200 rounded-none">
+                {chartTabs.map((tab) => {
+                  const IconComponent = tab.icon
+                  const isActive = selectedTab === tab.key
+                  return (
+                    <button
+                      key={tab.key}
+                      onClick={() => setSelectedTab(tab.key)}
+                      className={`
+                        flex-1 flex items-center justify-center gap-2 px-4 py-3
+                        font-medium text-base transition-all duration-200 rounded-none
+                        ${
+                          isActive
+                            ? "bg-emerald-500 text-white shadow border border-emerald-300"
+                            : "text-slate-600 border-transparent hover:bg-emerald-50 hover:text-emerald-600"
+                        }
+                      `}
+                    >
+                      <IconComponent className="w-4 h-4" />
+                      <span>{tab.label}</span>
+                      {isActive && (
+                        <span className="ml-2 text-white text-sm">{tab.desc}</span>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
-            )}
+            </div>
+
+            {/* ▶▶▶ 여기 카드(외부 border)만 없앴음! */}
+            <Card className="flex-1 bg-white border-none mb-7 rounded-none">
+              <CardContent className="p-6 h-full">
+                <div className="h-full w-full overflow-hidden bg-white rounded-none">
+                  {renderTabContent()}
+                </div>
+              </CardContent>
+            </Card>
           </div>
 
-          {/* 오른쪽: 호가창 */}
-          <div style={{ width: 350, minWidth: 300, maxWidth: 400, borderLeft: "1px solid #eee", background: "white" }}>
+          {/* Right sidebar - Order book & Summary */}
+          <div className="w-80 border-l border-slate-200 bg-white py-4 px-2 flex flex-col gap-4 overflow-y-auto">
             {selectedStock.code ? (
-              <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
+              <>
+                <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
+                {/* Divider 추가 */}
+                <hr className="my-2 border-t border-gray-200" />
+                <SummaryTable code={selectedStock.code} days={3} />
+              </>
             ) : (
-              <div
-                style={{
-                  height: "100%",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  color: "#999",
-                  textAlign: "center",
-                  padding: "20px",
-                }}
-              >
-                종목을 선택하면
-                <br />
-                호가 정보를 확인할 수 있습니다.
+              <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6">
+                <BarChart3 className="w-12 h-12 text-slate-500/40 mb-4" />
+                <p>
+                  종목을 선택하면<br />호가 정보를 확인할 수 있습니다.
+                </p>
               </div>
             )}
           </div>

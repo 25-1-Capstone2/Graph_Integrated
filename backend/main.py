@@ -1,5 +1,4 @@
-# main.py
-from fastapi import FastAPI, Query
+from fastapi import FastAPI, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import datetime
 import pandas as pd
@@ -12,28 +11,26 @@ from fastapi.responses import JSONResponse
 import numpy as np
 import os
 from dotenv import load_dotenv
-import os
 import json
-import requests
 import asyncio
 import websockets
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import unpad
 from base64 import b64decode
+
+# ✅ (추가) 크롤링에 필요
+from bs4 import BeautifulSoup
 
 app = FastAPI()
 
 # CORS 설정 (프론트 연결용)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # 필요 시 특정 프론트 주소만 허용
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
 
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env.local')
 load_dotenv(dotenv_path=env_path)
@@ -42,8 +39,6 @@ APP_KEY = os.getenv('KIS_API_KEY')
 APP_SECRET = os.getenv('KIS_API_SECRET')
 CUST_TYPE = 'P'
 WS_URL = 'ws://ops.koreainvestment.com:21000'
-
-
 
 def get_approval(key, secret):
     url = 'https://openapi.koreainvestment.com:9443'
@@ -103,6 +98,7 @@ async def websocket_endpoint(websocket: WebSocket, code: str = Query(...)):
         print(f"[WebSocket] 클라이언트 연결 종료({code})")
     except Exception as e:
         print(f"에러: {e}")
+        await websocket.send_json({"type": "error", "msg": "실시간 데이터 미제공(장마감/오류)"})
         await websocket.close()
 
 # ✅ 종목명 → 코드 변환
@@ -120,7 +116,7 @@ def get_token() -> str:
     kis_auth("prod")
     return getTREnv().my_token.replace("Bearer ", "")
 
-# ✅ 실시간 시세 조회
+# ✅ 실시간 시세 조회, 등락률
 def get_stock_price(code: str) -> Dict[str, str]:
     token = get_token()
     env = getTREnv()
@@ -134,14 +130,14 @@ def get_stock_price(code: str) -> Dict[str, str]:
     url = f"{env.my_url}/uapi/domestic-stock/v1/quotations/inquire-price"
     res = requests.get(url, headers=headers, params=params)
     data = res.json()
-    if "output" not in data or "stck_prpr" not in data["output"]:
-        raise ValueError(f"응답 오류: {data}")
+    output = data.get("output", {})
     return {
-        "price": int(data["output"]["stck_prpr"]),
+        "price": int(output.get("stck_prpr", 0)),
+        "diff": int(output.get("prdy_vrss", 0)),
+        "diff_rate": float(output.get("prdy_ctrt", 0)),
+        "prev_close": int(output.get("stck_clpr", 0)),
         "time": datetime.datetime.now().strftime("%H:%M:%S")
     }
-
-
 
 # ✅ RSI 계산
 def calculate_rsi(df: pd.DataFrame, period: int = 14) -> pd.Series:
@@ -172,7 +168,7 @@ def get_summary_days(code: str, days: int) -> pd.DataFrame:
     today = datetime.datetime.today()
     start = today - datetime.timedelta(days=days + 5)
     df = fdr.DataReader(code, start, today)
-    df = df.tail(days).copy()
+    df = df.tail(days).copy()   
     df["날짜"] = df.index.strftime("%Y-%m-%d")
     df["거래대금"] = df["Close"] * df["Volume"]
     df["등락률(%)"] = df["Close"].pct_change().fillna(0) * 100
@@ -203,6 +199,112 @@ def calculate_profit(code: str, buy_price: int, quantity: int) -> Dict:
     }
 
 # ===============================
+# ✅ (추가) 기업 개요/재무 요약 함수
+# ===============================
+def get_summary(code: str) -> dict:
+    import pandas as pd
+    import requests
+    from bs4 import BeautifulSoup
+    import FinanceDataReader as fdr
+
+    info_df = fdr.StockListing('KRX')
+    info_df.columns = [c.lower() for c in info_df.columns]
+    row = info_df[info_df['code'] == code].iloc[0]
+    name = row['name']
+    market_cap = int(row['marcap']) if 'marcap' in row and not pd.isna(row['marcap']) else 0
+    stocks = int(row['stocks']) if 'stocks' in row and not pd.isna(row['stocks']) else 0
+
+    # 2. 기업 개요(네이버 금융 크롤링)
+    desc = ""
+    foreign_rate = "-"
+    industry_rank = "-"
+    biz_sector = "-"
+    highest_52 = "-"
+    lowest_52 = "-"
+
+    try:
+        url = f"https://finance.naver.com/item/main.nhn?code={code}"
+        r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
+        soup = BeautifulSoup(r.text, "lxml")
+        # 기업 설명
+        summary = soup.select_one('.description')
+        if summary:
+            desc = summary.text.strip()
+
+        # 🟢 외국인비율
+        fr_elem = soup.select_one("div.rate_info__item--foreigner .rate_info__value")
+        if fr_elem:
+            foreign_rate = fr_elem.text.strip()
+        else:
+            txt = soup.find(text=lambda t: "외국인비율" in t)
+            if txt and txt.parent:
+                td = txt.parent.find_next("td")
+                if td:
+                    foreign_rate = td.text.strip()
+
+        # 🟢 52주 최고/최저
+        rate_table = soup.find("table", class_="rate_table")
+        if rate_table:
+            ths = rate_table.find_all("th")
+            for th in ths:
+                if "52주 최고" in th.text:
+                    td = th.find_next_sibling("td")
+                    if td:
+                        highest_52 = td.text.strip()
+                if "52주 최저" in th.text:
+                    td = th.find_next_sibling("td")
+                    if td:
+                        lowest_52 = td.text.strip()
+        # 필요시 업종내 순위, 사업분야도 이처럼 추가 크롤링 가능
+
+    except Exception as e:
+        print("네이버금융 크롤링 에러:", e)
+
+    # 3. 최근 연간 실적(매출/영업/순이익) - 네이버 재무제표
+    revenue_series = []
+    recent_revenue = recent_op_profit = recent_net_profit = 0
+    try:
+        table = soup.select_one("table.tb_type1.tb_num.tb_type1_ifrs")
+        if table is not None:
+            df = pd.read_html(str(table))[0]
+            years = df.columns[1:]  # 첫 번째 컬럼은 항목명
+            revenue_series = []
+            for i, y in enumerate(years):
+                revenue = float(str(df.iloc[0, i+1]).replace(',', '').replace('nan', '0'))
+                op = float(str(df.iloc[1, i+1]).replace(',', '').replace('nan', '0'))
+                net = float(str(df.iloc[2, i+1]).replace(',', '').replace('nan', '0'))
+                revenue_series.append({
+                    "year": str(y),
+                    "revenue": revenue,
+                    "op": op,
+                    "net": net,
+                })
+            # 가장 최근 연도 값(마지막)
+            if revenue_series:
+                recent = revenue_series[-1]
+                recent_revenue = recent["revenue"]
+                recent_op_profit = recent["op"]
+                recent_net_profit = recent["net"]
+    except Exception as e:
+        print("네이버 재무제표 크롤링 에러:", e)
+
+    return {
+        "name": name,
+        "marketCap": f"{market_cap:,}원",
+        "industryRank": industry_rank,
+        "stocks": f"{stocks:,}주",
+        "foreignRate": foreign_rate,
+        "bizSector": biz_sector,
+        "highest52": highest_52,
+        "lowest52": lowest_52,
+        "recentRevenue": recent_revenue,
+        "recentOpProfit": recent_op_profit,
+        "recentNetProfit": recent_net_profit,
+        "revenueSeries": revenue_series,
+        "desc": desc
+    }
+
+# ===============================
 # ✅ API 엔드포인트들
 # ===============================
 
@@ -220,24 +322,16 @@ def price(code: str):
 def chart(code: str):
     try:
         df = get_10_year_chart_by_fdr(code)
-
-        # ✅ 날짜 문자열로 변환
         df["Date"] = df["Date"].astype(str)
-
-        # ✅ NaN 및 inf 제거 → None 처리 (핵심)
         df = df.replace([np.inf, -np.inf], None)
         df = df.where(df.notnull(), None)
-
-        # ✅ 일부 float → None으로 못 바뀐 경우 강제 제거
         clean_records = []
         for row in df.to_dict(orient="records"):
             for k, v in row.items():
                 if isinstance(v, float) and (pd.isna(v) or np.isnan(v)):
                     row[k] = None
             clean_records.append(row)
-
         return JSONResponse(content=clean_records)
-
     except Exception as e:
         import traceback
         print("🔥 /chart 오류:", e)
@@ -268,16 +362,11 @@ def combined_chart(code: str):
         df["MA120"] = df["Close"].rolling(window=120).mean()
         df["Date"] = df["Date"].astype(str)
         df = df[["Date", "Open", "High", "Low", "Close", "MA5", "MA20", "MA60", "MA120"]]
-
-        # 1. inf, -inf를 None으로
         df = df.replace([np.inf, -np.inf], None)
-        # 2. NaN을 None으로 (where)
         df = df.where(df.notnull(), None)
-        # 3. 남은 NaN/inf 강제 변환 (dict 변환 후 수작업)
         clean_records = []
         for row in df.to_dict(orient="records"):
             for k, v in row.items():
-                # 만약 float이면서 NaN이라면 None으로
                 if isinstance(v, float) and (pd.isna(v) or np.isnan(v)):
                     row[k] = None
             clean_records.append(row)
@@ -288,8 +377,6 @@ def combined_chart(code: str):
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
-
-    
 @app.get("/company")
 def company():
     try:
@@ -301,26 +388,21 @@ def company():
         print("🔥 /company 오류:", e)
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
-    
-    
-    
+
 @app.get("/orderbook")
 def orderbook(code: str):
-    """
-    선택한 종목코드(code)로 한국투자증권 OpenAPI에서 실시간 호가정보(10단계) 반환
-    """
     try:
         token = get_token()
         env = getTREnv()
         headers = {
             "authorization": f"Bearer {token}",
-            "appkey": KIS_API_KEY,
-            "appsecret": KIS_API_SECRET,
+            "appkey": os.getenv('KIS_API_KEY'),
+            "appsecret": os.getenv('KIS_API_SECRET'),
             "tr_id": "FHKST01010200"
         }
         params = {
-            "fid_cond_mrkt_div_code": "J",  # 코스피/코스닥
-            "fid_input_iscd": code          # 여기에 선택된 code가 들어감!
+            "fid_cond_mrkt_div_code": "J",
+            "fid_input_iscd": code
         }
         url = f"{env.my_url}/uapi/domestic-stock/v1/quotations/inquire-ask-price"
         res = requests.get(url, headers=headers, params=params)
@@ -336,7 +418,6 @@ def orderbook(code: str):
             return JSONResponse(status_code=500, content={"error": "한국투자증권 output 없음", "raw": data})
 
         output = data.get("output", {})
-
         asks = []
         bids = []
         for i in range(1, 11):
@@ -362,7 +443,7 @@ def orderbook(code: str):
         price_change_percent = float(output.get("prdy_ctrt", 0))
 
         return {
-            "asks": asks[::-1],  # 높은 가격이 위로 오게
+            "asks": asks[::-1],
             "bids": bids,
             "currentPrice": current_price,
             "priceChange": price_change,
@@ -374,3 +455,102 @@ def orderbook(code: str):
         traceback.print_exc()
         return JSONResponse(status_code=500, content={"error": str(e)})
 
+def parse_price_tick(data):
+    recv = data.split('^')
+    return {
+        "price": int(recv[2]),
+        "diff": int(recv[4]),
+        "diff_rate": float(recv[5]),
+    }
+
+@app.websocket("/ws/price")
+async def price_ws(websocket: WebSocket):
+    await websocket.accept()
+    try:
+        query = websocket.query_params
+        code = query.get("code")
+        if not code:
+            await websocket.close()
+            return
+        approval_key = get_approval(APP_KEY, APP_SECRET)
+        async with websockets.connect(WS_URL, ping_interval=None) as kis_ws:
+            senddata = {
+                "header": {
+                    "approval_key": approval_key,
+                    "custtype": CUST_TYPE,
+                    "tr_type": "1",
+                    "content-type": "utf-8"
+                },
+                "body": {
+                    "input": {
+                        "tr_id": "H0STCNT0",
+                        "tr_key": code
+                    }
+                }
+            }
+            await kis_ws.send(json.dumps(senddata))
+            while True:
+                data = await kis_ws.recv()
+                if data[0] == '0':
+                    recvstr = data.split('|')
+                    trid0 = recvstr[1]
+                    if trid0 == "H0STCNT0":
+                        tick = parse_price_tick(recvstr[3])
+                        await websocket.send_json(tick)
+    except WebSocketDisconnect:
+        print(f"[WebSocket] 가격 ws 클라이언트 종료({code})")
+    except Exception as e:
+        print(f"WS price 에러: {e}")
+        await websocket.close()
+
+# ===============================
+# ✅ (추가) 회사요약 엔드포인트!
+# ===============================
+@app.get("/company-summary")
+def company_summary(code: str):
+    return get_summary(code)
+
+
+
+def get_token() -> str:
+    kis_auth("prod")
+    return getTREnv().my_token.replace("Bearer ", "")
+
+@app.get("/indexes")
+def get_indexes():
+    token = get_token()
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-index-price"
+    results = []
+    indexes = [
+        {"code": "0001", "market": "J", "name": "코스피"},
+        {"code": "1001", "market": "Q", "name": "코스닥"},
+        {"code": "3001", "market": "J", "name": "KRX100"},
+        {"code": "3501", "market": "Q", "name": "KOSDAQ150"},
+        {"code": "3101", "market": "J", "name": "KRX300"},
+    ]
+    for idx in indexes:
+        headers = {
+            "authorization": f"Bearer {token}",
+            "appkey": APP_KEY,
+            "appsecret": APP_SECRET,
+            "tr_id": "FHKUP03500100",
+            "custtype": "P"
+        }
+        params = {
+            "fid_cond_mrkt_div_code": idx["market"],
+            "fid_input_iscd": idx["code"]
+        }
+        res = requests.get(url, headers=headers, params=params)
+        try:
+            output = res.json().get("output", {})
+        except Exception as e:
+            print(f"🔥 지수 응답 오류 ({idx['name']}):", res.text)
+            output = {}
+        results.append({
+            "name": idx["name"],
+            "code": idx["code"],
+            "price": int(output.get("indx_prpr", 0)),
+            "diff": int(output.get("prdy_vrss", 0)),
+            "rate": float(output.get("prdy_ctrt", 0)),
+        })
+    return JSONResponse(content=results)

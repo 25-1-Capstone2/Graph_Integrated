@@ -1,33 +1,37 @@
+// Watchlist.tsx
 'use client'
 
 import { useEffect, useState } from "react"
-import { Search, Star, Plus, X, Minus, ChevronUp, ChevronDown } from "lucide-react"
+import { Search, Star, Plus, X, Minus } from "lucide-react"
 import supabase from '../../lib/supabase'
 
-
-type Stock = {
-  code: string
-  name: string
-}
-
-type WatchlistStock = Stock & {
-  id?: number
-}
+type Stock = { code: string; name: string }
+type WatchlistStock = Stock & { id?: number }
+type PriceTick = { price: number, diff: number, diff_rate: number } | null
 
 type Props = {
   selectedStock: Stock
   onStockSelect: (stock: Stock) => void
-  userId: string // ★ 유저ID 전달받음
+  userId: string
+  priceMap: Record<string, PriceTick>
+  setPriceMap: React.Dispatch<React.SetStateAction<Record<string, PriceTick>>>
 }
 
-export default function Watchlist({ selectedStock, onStockSelect, userId }: Props) {
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000"
+
+export default function Watchlist({
+  selectedStock,
+  onStockSelect,
+  userId,
+  priceMap,
+  setPriceMap,
+}: Props) {
   const [watchlist, setWatchlist] = useState<WatchlistStock[]>([])
   const [searchQuery, setSearchQuery] = useState("")
   const [searchResults, setSearchResults] = useState<Stock[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [marketSummaryOpen, setMarketSummaryOpen] = useState(true)
 
-  // 전체 종목 데이터 (실제론 fetch로 대체)
+  // 전체 종목 (실제론 fetch 대체)
   const allStocks: Stock[] = [
     { code: "000660", name: "SK하이닉스" },
     { code: "035720", name: "카카오" },
@@ -38,10 +42,10 @@ export default function Watchlist({ selectedStock, onStockSelect, userId }: Prop
     { code: "000270", name: "기아" },
     { code: "105560", name: "KB금융" },
     { code: "005930", name: "삼성전자" },
-    // ...기타 종목 추가
+    // ...더 추가
   ]
 
-  // 1) 관심종목 불러오기 (유저별)
+  // 관심종목 불러오기
   useEffect(() => {
     if (!userId) return
     const fetchWatchlist = async () => {
@@ -61,7 +65,7 @@ export default function Watchlist({ selectedStock, onStockSelect, userId }: Prop
     fetchWatchlist()
   }, [userId])
 
-  // 2) 검색 기능 (관심종목에 없는 것만 필터)
+  // 검색 (관심종목 없는 것만)
   useEffect(() => {
     if (searchQuery.trim() === "") {
       setSearchResults([])
@@ -77,27 +81,23 @@ export default function Watchlist({ selectedStock, onStockSelect, userId }: Prop
     setIsSearching(true)
   }, [searchQuery, watchlist])
 
-  // 3) 관심종목 추가
+  // 관심종목 추가
   const addFavorite = async (stock: Stock) => {
     if (watchlist.some(item => item.code === stock.code)) return
     const { data, error } = await supabase
       .from('watchlist')
       .insert([
-        {
-          user_id: userId,
-          stock_code: stock.code,
-          stock_name: stock.name,
-        }
+        { user_id: userId, stock_code: stock.code, stock_name: stock.name }
       ])
       .select()
     if (!error && data && data[0]) {
       setWatchlist(prev => [...prev, { ...stock, id: data[0].id }])
     }
-    setSearchQuery("") // 추가 후 검색창 비우기
+    setSearchQuery("")
     setIsSearching(false)
   }
 
-  // 4) 관심종목 제거
+  // 관심종목 제거
   const removeFavorite = async (stock: Stock) => {
     const { error } = await supabase
       .from('watchlist')
@@ -106,8 +106,41 @@ export default function Watchlist({ selectedStock, onStockSelect, userId }: Prop
       .eq('stock_code', stock.code)
     if (!error) {
       setWatchlist(prev => prev.filter(item => item.code !== stock.code))
+      setPriceMap(prev => {
+        const next = { ...prev }
+        delete next[stock.code]
+        return next
+      })
     }
   }
+
+  // 등락률 REST polling (5초마다)
+  useEffect(() => {
+    let timer: any
+    const fetchPrices = async () => {
+      if (watchlist.length === 0) return
+      const results: Record<string, PriceTick> = {}
+      await Promise.all(watchlist.map(async stock => {
+        try {
+          const res = await fetch(`${BACKEND_URL}/price?code=${stock.code}`)
+          if (res.ok) {
+            const json = await res.json()
+            results[stock.code] = {
+              price: json.price,
+              diff: json.diff ?? json.price - (json.prev_close || 0),
+              diff_rate: json.diff_rate ?? json.rate ?? 0,
+            }
+          }
+        } catch (e) {
+          results[stock.code] = null
+        }
+      }))
+      setPriceMap(results)   // 반드시 prop의 setPriceMap 호출!
+    }
+    fetchPrices()
+    timer = setInterval(fetchPrices, 5000)
+    return () => clearInterval(timer)
+  }, [watchlist, setPriceMap])
 
   return (
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
@@ -165,35 +198,58 @@ export default function Watchlist({ selectedStock, onStockSelect, userId }: Prop
         </div>
       )}
 
-      {/* 관심종목 리스트: - 버튼으로 삭제 */}
+      {/* 관심종목 리스트 */}
       <div className="flex-1 overflow-y-auto">
         {watchlist.length === 0 && (
           <div className="p-8 text-center text-gray-400">관심종목을 추가해보세요.</div>
         )}
-        {watchlist.map((stock) => (
-          <div
-            key={stock.code}
-            onClick={() => onStockSelect(stock)}
-            className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors ${selectedStock.code === stock.code ? "bg-blue-50" : ""}`}
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-2">
-                <Star className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                <span className="font-medium text-gray-900">{stock.name}</span>
-                <span className="text-xs text-gray-500">{stock.code}</span>
+        {watchlist.map((stock) => {
+          const tick = priceMap[stock.code]
+          const up = tick && tick.diff > 0
+          const down = tick && tick.diff < 0
+          const diffClass = up ? "text-red-600" : down ? "text-blue-600" : "text-gray-600"
+          const priceClass = up ? "text-red-600" : down ? "text-blue-600" : "text-gray-700"
+          return (
+            <div
+              key={stock.code}
+              onClick={() => onStockSelect(stock)}
+              className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-colors ${selectedStock.code === stock.code ? "bg-blue-50" : ""}`}
+            >
+              {/* 첫째 줄: 종목명 + 등락률/등락액 + 삭제버튼 */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-2 min-w-0">
+                  <Star className="w-4 h-4 text-yellow-400 fill-yellow-400 flex-shrink-0" />
+                  <span className="font-medium text-gray-900 truncate">{stock.name}</span>
+                </div>
+                <div className="flex items-center space-x-4 flex-shrink-0">
+                  {/* 등락률/등락액 항상 삭제버튼 왼쪽에 고정 */}
+                  <span className={`text-sm font-bold text-right min-w-[120px] ${diffClass}`}>
+                    {tick
+                      ? <>
+                          {tick.diff > 0 && "+"}
+                          {tick.diff?.toLocaleString()}원 ({tick.diff_rate > 0 ? "+" : ""}{tick.diff_rate?.toFixed(2)}%)
+                        </>
+                      : <span className="text-gray-400">-</span>
+                    }
+                  </span>
+                  <button
+                    onClick={e => {
+                      e.stopPropagation()
+                      removeFavorite(stock)
+                    }}
+                    className="text-gray-400 hover:text-red-500 flex items-center"
+                  >
+                    <Minus className="w-4 h-4 mr-1" /> 삭제
+                  </button>
+                </div>
               </div>
-              <button
-                onClick={e => {
-                  e.stopPropagation()
-                  removeFavorite(stock)
-                }}
-                className="text-gray-400 hover:text-red-500 flex items-center"
-              >
-                <Minus className="w-4 h-4 mr-1" /> 삭제
-              </button>
+              {/* 둘째 줄: 실시간 금액(항상 아래) */}
+              <div className={`ml-7 mt-0.5 text-xs font-bold ${priceClass}`}>
+                {tick ? tick.price.toLocaleString() + "원" : <span className="text-gray-400">-</span>}
+              </div>
             </div>
-          </div>
-        ))}
+          )
+        })}
       </div>
     </div>
   )

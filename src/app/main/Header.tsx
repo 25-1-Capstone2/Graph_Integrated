@@ -67,7 +67,7 @@ const Header = ({ userEmail, onSelect }: Props) => {
     <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-6 relative z-50">
       {/* Logo */}
       <div className="flex items-center space-x-4">
-        <div className="text-xl font-bold text-blue-600 select-none tracking-tight">Prediction</div>
+        <div className="text-xl font-bold text-blue-600 select-none tracking-tight">StockPredictor</div>
       </div>
 
       {/* Search Bar */}
