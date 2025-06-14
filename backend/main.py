@@ -202,6 +202,11 @@ def calculate_profit(code: str, buy_price: int, quantity: int) -> Dict:
 # ✅ (추가) 기업 개요/재무 요약 함수
 # ===============================
 def get_summary(code: str) -> dict:
+    import pandas as pd
+    import requests
+    from bs4 import BeautifulSoup
+    import FinanceDataReader as fdr
+
     info_df = fdr.StockListing('KRX')
     info_df.columns = [c.lower() for c in info_df.columns]
     row = info_df[info_df['code'] == code].iloc[0]
@@ -216,24 +221,44 @@ def get_summary(code: str) -> dict:
     biz_sector = "-"
     highest_52 = "-"
     lowest_52 = "-"
+
     try:
         url = f"https://finance.naver.com/item/main.nhn?code={code}"
         r = requests.get(url, headers={'User-Agent': 'Mozilla/5.0'})
         soup = BeautifulSoup(r.text, "lxml")
+        # 기업 설명
         summary = soup.select_one('.description')
         if summary:
             desc = summary.text.strip()
 
-        # 외국인비율, 업종내 순위, 52주 최고/최저, 사업분야 등은 네이버 금융에서 table/caption 등을 추가 파싱해야 함
-        # 아래는 예시로, 네이버 금융의 '시가총액/외국인비율/52주최고/최저' 등 가져오는 방식 예시 (셀렉터 확인 필요)
-        info_table = soup.select_one(".first")  # 첫 번째 정보 박스(실제로 확인해서 정확한 셀렉터로 교체 필요)
-        if info_table:
-            text = info_table.get_text()
-            # 여기서 정규표현식/분할 등으로 직접 파싱
-            # 예시) 외국인비율: "외국인비율 40.32%" 처럼 되어 있음
-        # ... 추가 파싱
-    except Exception:
-        pass
+        # 🟢 외국인비율
+        fr_elem = soup.select_one("div.rate_info__item--foreigner .rate_info__value")
+        if fr_elem:
+            foreign_rate = fr_elem.text.strip()
+        else:
+            txt = soup.find(text=lambda t: "외국인비율" in t)
+            if txt and txt.parent:
+                td = txt.parent.find_next("td")
+                if td:
+                    foreign_rate = td.text.strip()
+
+        # 🟢 52주 최고/최저
+        rate_table = soup.find("table", class_="rate_table")
+        if rate_table:
+            ths = rate_table.find_all("th")
+            for th in ths:
+                if "52주 최고" in th.text:
+                    td = th.find_next_sibling("td")
+                    if td:
+                        highest_52 = td.text.strip()
+                if "52주 최저" in th.text:
+                    td = th.find_next_sibling("td")
+                    if td:
+                        lowest_52 = td.text.strip()
+        # 필요시 업종내 순위, 사업분야도 이처럼 추가 크롤링 가능
+
+    except Exception as e:
+        print("네이버금융 크롤링 에러:", e)
 
     # 3. 최근 연간 실적(매출/영업/순이익) - 네이버 재무제표
     revenue_series = []
@@ -260,8 +285,8 @@ def get_summary(code: str) -> dict:
                 recent_revenue = recent["revenue"]
                 recent_op_profit = recent["op"]
                 recent_net_profit = recent["net"]
-    except Exception:
-        pass
+    except Exception as e:
+        print("네이버 재무제표 크롤링 에러:", e)
 
     return {
         "name": name,
@@ -276,8 +301,8 @@ def get_summary(code: str) -> dict:
         "recentOpProfit": recent_op_profit,
         "recentNetProfit": recent_net_profit,
         "revenueSeries": revenue_series,
+        "desc": desc
     }
-
 
 # ===============================
 # ✅ API 엔드포인트들
@@ -484,3 +509,48 @@ async def price_ws(websocket: WebSocket):
 @app.get("/company-summary")
 def company_summary(code: str):
     return get_summary(code)
+
+
+
+def get_token() -> str:
+    kis_auth("prod")
+    return getTREnv().my_token.replace("Bearer ", "")
+
+@app.get("/indexes")
+def get_indexes():
+    token = get_token()
+    url = "https://openapi.koreainvestment.com:9443/uapi/domestic-stock/v1/quotations/inquire-index-price"
+    results = []
+    indexes = [
+        {"code": "0001", "market": "J", "name": "코스피"},
+        {"code": "1001", "market": "Q", "name": "코스닥"},
+        {"code": "3001", "market": "J", "name": "KRX100"},
+        {"code": "3501", "market": "Q", "name": "KOSDAQ150"},
+        {"code": "3101", "market": "J", "name": "KRX300"},
+    ]
+    for idx in indexes:
+        headers = {
+            "authorization": f"Bearer {token}",
+            "appkey": APP_KEY,
+            "appsecret": APP_SECRET,
+            "tr_id": "FHKUP03500100",
+            "custtype": "P"
+        }
+        params = {
+            "fid_cond_mrkt_div_code": idx["market"],
+            "fid_input_iscd": idx["code"]
+        }
+        res = requests.get(url, headers=headers, params=params)
+        try:
+            output = res.json().get("output", {})
+        except Exception as e:
+            print(f"🔥 지수 응답 오류 ({idx['name']}):", res.text)
+            output = {}
+        results.append({
+            "name": idx["name"],
+            "code": idx["code"],
+            "price": int(output.get("indx_prpr", 0)),
+            "diff": int(output.get("prdy_vrss", 0)),
+            "rate": float(output.get("prdy_ctrt", 0)),
+        })
+    return JSONResponse(content=results)

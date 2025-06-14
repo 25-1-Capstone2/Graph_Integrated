@@ -2,11 +2,10 @@
 
 import React, { useEffect, useState } from "react"
 import { BarChart3 } from "lucide-react"
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
 
 type Props = {
   code: string
-  days?: number // 기본값 3일
+  days?: number
 }
 
 type SummaryRow = {
@@ -45,98 +44,85 @@ export default function SummaryTable({ code, days = 3 }: Props) {
 
   if (loading) {
     return (
-      <Card className="h-full">
-        <CardHeader className="py-1 px-3 border-b bg-gray-50/50">
-          <CardTitle className="text-sm font-medium flex items-center gap-2 mb-0 pb-0">
-            <BarChart3 className="w-4 h-4" />
-            단기 시세 요약
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pb-2 px-0">
-          <div className="flex items-center justify-center h-24">
-            <div className="animate-pulse text-gray-500">불러오는 중...</div>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="h-full w-full">
+        <div className="py-1 px-0 border-b bg-white flex items-center gap-2">
+          <BarChart3 className="w-4 h-4" />
+          <span className="text-sm font-medium">단기 시세 요약</span>
+        </div>
+        <div className="flex items-center justify-center h-24">
+          <div className="animate-pulse text-gray-500">불러오는 중...</div>
+        </div>
+      </div>
     )
   }
 
   if (!data.length) {
     return (
-      <Card className="h-full border-0 shadow-sm">
-        <CardHeader className="py-1 px-3 border-b bg-gray-50/50">
-          <CardTitle className="text-sm font-medium flex items-center gap-2 mb-0 pb-0">
-            <BarChart3 className="w-4 h-4 text-green-500" />
-            단기 시세 요약
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="pt-1 pb-2 px-0">
-          <div className="py-8 text-center text-gray-400">시세 요약 데이터 없음</div>
-        </CardContent>
-      </Card>
+      <div className="h-full w-full">
+        <div className="py-1 px-0 border-b bg-white flex items-center gap-2">
+          <BarChart3 className="w-4 h-4 text-green-500" />
+          <span className="text-sm font-medium">단기 시세 요약</span>
+        </div>
+        <div className="py-8 text-center text-gray-400">시세 요약 데이터 없음</div>
+      </div>
     )
   }
 
   return (
-    <Card className="h-full border-0 shadow-sm">
-      <CardHeader className="py-1 px-3 border-b bg-gray-50/50">
-        <CardTitle className="text-sm font-medium flex items-center gap-2 mb-0 pb-0">
-          <BarChart3 className="w-4 h-4 text-green-500" />
-          단기 시세 요약 ({days}일)
-        </CardTitle>
-      </CardHeader>
-      <CardContent className="pt-1 pb-2 px-0">
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-xs border-separate border-spacing-0">
-            <thead>
-              <tr className="bg-gray-100 text-gray-600 font-medium">
-                <th className="px-1 py-1 border-b">날짜</th>
-                <th className="px-1 py-1 border-b">시가</th>
-                <th className="px-1 py-1 border-b">고가</th>
-                <th className="px-1 py-1 border-b">저가</th>
-                <th className="px-1 py-1 border-b">종가</th>
-                <th className="px-1 py-1 border-b">전일대비</th>
-                <th className="px-1 py-1 border-b">등락률(%)</th>
-                <th className="px-1 py-1 border-b">거래량</th>
-                <th className="px-1 py-1 border-b">거래대금</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.map((row, idx) => {
-                const isUp = row["등락률(%)"] > 0
-                const isDown = row["등락률(%)"] < 0
-                return (
-                  <tr key={row.날짜} className="hover:bg-gray-50">
-                    <td className="px-1 py-1 text-center border-b">{row.날짜}</td>
-                    <td className="px-1 py-1 text-right border-b">{row.시가.toLocaleString()}</td>
-                    <td className="px-1 py-1 text-right border-b text-red-600">{row.고가.toLocaleString()}</td>
-                    <td className="px-1 py-1 text-right border-b text-blue-600">{row.저가.toLocaleString()}</td>
-                    <td className="px-1 py-1 text-right border-b font-bold">
-                      <span className={isUp ? "text-red-600" : isDown ? "text-blue-600" : "text-gray-900"}>
-                        {row.종가.toLocaleString()}
-                      </span>
-                    </td>
-                    <td className={`px-1 py-1 text-right border-b ${row.전일대비 > 0 ? "text-red-600" : row.전일대비 < 0 ? "text-blue-600" : "text-gray-700"}`}>
-                      {row.전일대비 > 0 ? "+" : ""}
-                      {row.전일대비.toLocaleString()}
-                    </td>
-                    <td className={`px-1 py-1 text-right border-b ${isUp ? "text-red-600" : isDown ? "text-blue-600" : "text-gray-700"}`}>
-                      {row["등락률(%)"] > 0 ? "+" : ""}
-                      {row["등락률(%)"].toFixed(2)}
-                    </td>
-                    <td className="px-1 py-1 text-right border-b">{formatNumber(row.거래량)}</td>
-                    <td className="px-1 py-1 text-right border-b">{formatNumber(row.거래대금)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-        {/* 업데이트 시간 */}
-        <div className="p-1 bg-gray-50 border-t text-xs text-gray-400 text-center">
-          마지막 업데이트: {new Date().toLocaleTimeString()}
-        </div>
-      </CardContent>
-    </Card>
+    <div className="h-full w-full">
+      <div className="py-1 px-0 border-b bg-white flex items-center gap-2">
+        <BarChart3 className="w-4 h-4 text-green-500" />
+        <span className="text-sm font-medium">단기 시세 요약 ({days}일)</span>
+      </div>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-xs border-separate border-spacing-0">
+          <thead>
+            <tr className="bg-gray-100 text-gray-600 font-medium">
+              <th className="px-1 py-1 border-b">날짜</th>
+              <th className="px-1 py-1 border-b">시가</th>
+              <th className="px-1 py-1 border-b">고가</th>
+              <th className="px-1 py-1 border-b">저가</th>
+              <th className="px-1 py-1 border-b">종가</th>
+              <th className="px-1 py-1 border-b">전일대비</th>
+              <th className="px-1 py-1 border-b">등락률(%)</th>
+              <th className="px-1 py-1 border-b">거래량</th>
+              <th className="px-1 py-1 border-b">거래대금</th>
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row, idx) => {
+              const isUp = row["등락률(%)"] > 0
+              const isDown = row["등락률(%)"] < 0
+              return (
+                <tr key={row.날짜} className="hover:bg-gray-50">
+                  <td className="px-1 py-1 text-center border-b">{row.날짜}</td>
+                  <td className="px-1 py-1 text-right border-b">{row.시가.toLocaleString()}</td>
+                  <td className="px-1 py-1 text-right border-b text-red-600">{row.고가.toLocaleString()}</td>
+                  <td className="px-1 py-1 text-right border-b text-blue-600">{row.저가.toLocaleString()}</td>
+                  <td className="px-1 py-1 text-right border-b font-bold">
+                    <span className={isUp ? "text-red-600" : isDown ? "text-blue-600" : "text-gray-900"}>
+                      {row.종가.toLocaleString()}
+                    </span>
+                  </td>
+                  <td className={`px-1 py-1 text-right border-b ${row.전일대비 > 0 ? "text-red-600" : row.전일대비 < 0 ? "text-blue-600" : "text-gray-700"}`}>
+                    {row.전일대비 > 0 ? "+" : ""}
+                    {row.전일대비.toLocaleString()}
+                  </td>
+                  <td className={`px-1 py-1 text-right border-b ${isUp ? "text-red-600" : isDown ? "text-blue-600" : "text-gray-700"}`}>
+                    {row["등락률(%)"] > 0 ? "+" : ""}
+                    {row["등락률(%)"].toFixed(2)}
+                  </td>
+                  <td className="px-1 py-1 text-right border-b">{formatNumber(row.거래량)}</td>
+                  <td className="px-1 py-1 text-right border-b">{formatNumber(row.거래대금)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+      <div className="p-1 bg-white border-t text-xs text-gray-400 text-center">
+        마지막 업데이트: {new Date().toLocaleTimeString()}
+      </div>
+    </div>
   )
 }

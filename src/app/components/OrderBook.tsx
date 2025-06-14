@@ -1,7 +1,7 @@
 "use client"
+
 import React, { useEffect, useState, useRef } from "react"
-import { Card, CardHeader, CardTitle, CardContent } from "../components/ui/card"
-import { Activity, TrendingUp, TrendingDown } from "lucide-react"
+import { Activity } from "lucide-react"
 
 type HogaItem = {
   price: string
@@ -62,75 +62,83 @@ export default function OrderBook({ code, companyName }: Props) {
     return () => {
       ws.close()
     }
-    // eslint-disable-next-line
   }, [code])
 
-  // 매도/매수 10단계 → 상위 5개만 출력 (UI 가독성 위해)
+  // 매도/매수 10단계 → 상위 5개만 출력
   const sellList = orderbook?.sell?.slice(0, 5) ?? []
   const buyList = orderbook?.buy?.slice(0, 5) ?? []
 
   return (
-    <Card className="h-full border-0 shadow-sm">
-      <CardHeader className="pb-1 pt-2 px-4 border-b bg-gray-50/50">
-        <CardTitle className="text-sm font-medium flex items-center gap-2">
-          <Activity className="w-4 h-4 text-blue-500" />
+    <div className="h-full w-full overflow-hidden border-0 bg-white p-0 m-0">
+      {/* 헤더 */}
+      <div className="pb-1 pt-3 px-0 border-b border-slate-200 bg-white">
+        <h3 className="text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
+          <Activity className="w-4 h-4 text-emerald-500" />
           실시간 호가
-        </CardTitle>
-        <div className="text-xs text-gray-500">{companyName}</div>
-      </CardHeader>
-      <CardContent className="p-0">
+        </h3>
+        <div className="text-xs text-gray-400 font-medium">{companyName}</div>
+      </div>
+      {/* Content */}
+      <div className="p-0">
         {error ? (
-          <div className="p-6 text-center text-yellow-600 bg-yellow-50 font-semibold rounded">{error}</div>
+          <div className="p-4 text-center text-amber-600 bg-white font-medium border border-amber-100 my-2">
+            {error}
+          </div>
         ) : !orderbook ? (
-          <div className="flex items-center justify-center h-36 animate-pulse text-gray-500">
-            호가 데이터 수신 대기중...
+          <div className="flex items-center justify-center h-36 animate-pulse text-gray-500 bg-white">
+            <div className="text-center">
+              <Activity className="w-5 h-5 animate-pulse mx-auto mb-2 text-blue-500" />
+              호가 데이터 수신 대기중...
+            </div>
           </div>
         ) : (
           <div>
             {/* 종목/누적거래량/총매수총매도 */}
-            <div className="flex justify-between items-center px-4 py-2 bg-blue-50 border-b text-xs text-gray-600">
-              <span>코드: {orderbook.stock_code}</span>
-              <span>누적거래량: {Number(orderbook.acc_vol).toLocaleString()}</span>
+            <div className="flex justify-between items-center px-0 py-2 bg-white border-b text-xs font-medium">
+              <span className="text-slate-700">코드: {orderbook.stock_code}</span>
+              <span className="text-slate-700">누적거래량: {Number(orderbook.acc_vol).toLocaleString()}</span>
             </div>
-            <div className="flex justify-between px-4 py-1 text-xs text-gray-400 border-b">
-              <span>총매도호가: {Number(orderbook.sell_total).toLocaleString()}</span>
-              <span>총매수호가: {Number(orderbook.buy_total).toLocaleString()}</span>
+            <div className="flex justify-between px-0 py-1.5 text-xs font-medium border-b bg-white">
+              <span className="text-red-500">총매도호가: {Number(orderbook.sell_total).toLocaleString()}</span>
+              <span className="text-blue-500">총매수호가: {Number(orderbook.buy_total).toLocaleString()}</span>
             </div>
 
-            {/* 호가 테이블 */}
-            <div className="text-xs">
-              {/* 헤더 */}
-              <div className="grid grid-cols-3 gap-1 p-2 bg-gray-100 text-gray-600 font-medium rounded-t">
-                <div className="text-right">매도잔량</div>
-                <div className="text-center">호가</div>
-                <div className="text-left">매수잔량</div>
+            {/* 호가 테이블 헤더 */}
+            <div className="grid grid-cols-3 gap-1 p-0 bg-white text-gray-600 font-medium text-xs border-b border-slate-100">
+              <div className="text-right">매도잔량</div>
+              <div className="text-center">호가</div>
+              <div className="text-left">매수잔량</div>
+            </div>
+
+            {/* 매도 (위) */}
+            {sellList.map((v, idx) => (
+              <div
+                key={`sell-${idx}`}
+                className="grid grid-cols-3 gap-1 p-0 border-b border-gray-100 hover:bg-red-50/50 transition-colors"
+              >
+                <div className="text-right text-red-600 font-medium">{Number(v.qty).toLocaleString()}</div>
+                <div className="text-center font-semibold text-slate-700">{Number(v.price).toLocaleString()}</div>
+                <div></div>
               </div>
+            ))}
 
-              {/* 매도(위), 매수(아래) */}
-              {/* 매도: 잔량/호가/빈칸 */}
-              {sellList.map((v, idx) => (
-                <div key={`sell-${idx}`} className="grid grid-cols-3 gap-1 p-2 border-b border-gray-100 hover:bg-red-50 transition-colors">
-                  <div className="text-right text-red-600 font-medium">{Number(v.qty).toLocaleString()}</div>
-                  <div className="text-center font-semibold text-blue-700 bg-blue-100 rounded px-2 py-1">{Number(v.price).toLocaleString()}</div>
-                  <div></div>
-                </div>
-              ))}
+            {/* 구분선 */}
+            <div className="h-2 bg-gradient-to-r from-blue-100 via-purple-100 to-red-100 shadow-inner" />
 
-              {/* 구분선 */}
-              <div className="h-2 bg-gradient-to-r from-blue-100 via-purple-100 to-red-100" />
-
-              {/* 매수: 빈칸/호가/잔량 */}
-              {buyList.map((v, idx) => (
-                <div key={`buy-${idx}`} className="grid grid-cols-3 gap-1 p-2 border-b border-gray-100 hover:bg-blue-50 transition-colors">
-                  <div></div>
-                  <div className="text-center font-semibold text-red-700 bg-red-100 rounded px-2 py-1">{Number(v.price).toLocaleString()}</div>
-                  <div className="text-left text-blue-600 font-medium">{Number(v.qty).toLocaleString()}</div>
-                </div>
-              ))}
-            </div>
+            {/* 매수 (아래) */}
+            {buyList.map((v, idx) => (
+              <div
+                key={`buy-${idx}`}
+                className="grid grid-cols-3 gap-1 p-0 border-b border-gray-100 hover:bg-blue-50/50 transition-colors"
+              >
+                <div></div>
+                <div className="text-center font-semibold text-slate-700">{Number(v.price).toLocaleString()}</div>
+                <div className="text-left text-blue-600 font-medium">{Number(v.qty).toLocaleString()}</div>
+              </div>
+            ))}
           </div>
         )}
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

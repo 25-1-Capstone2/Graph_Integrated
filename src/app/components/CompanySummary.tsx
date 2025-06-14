@@ -8,10 +8,8 @@ type Props = { code: string }
 type SummaryData = {
   name: string
   marketCap: string
-  industryRank: string
   stocks: string
   foreignRate: string
-  bizSector: string
   highest52: string
   lowest52: string
   recentRevenue: number
@@ -65,18 +63,10 @@ export default function CompanySummary({ code }: Props) {
             <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
               <span className="text-gray-500">시가총액</span>
               <span className="font-medium">{data.marketCap}</span>
-              <span className="text-gray-500">업종내 순위</span>
-              <span className="font-medium">{data.industryRank}</span>
               <span className="text-gray-500">상장주식수</span>
               <span className="font-medium">{data.stocks}</span>
               <span className="text-gray-500">외국인비율</span>
               <span className="font-medium">{data.foreignRate}</span>
-              <span className="text-gray-500">52주 최고</span>
-              <span className="font-medium">{data.highest52}</span>
-              <span className="text-gray-500">52주 최저</span>
-              <span className="font-medium">{data.lowest52}</span>
-              <span className="text-gray-500">사업분야</span>
-              <span className="font-medium">{data.bizSector}</span>
             </div>
           </div>
           {/* 연간 실적 차트 */}

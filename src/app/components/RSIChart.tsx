@@ -87,7 +87,7 @@ export default function RSIChart({ code, companyName }: Props) {
 
   return (
     <div className="mt-8">
-      <h2 className="text-lg font-semibold mb-2">📉 RSI 보조지표</h2>
+      <h2 className="text-lg font-semibold mb-2"></h2>
       <Plot
         data={[
           {
