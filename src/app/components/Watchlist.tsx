@@ -146,7 +146,7 @@ export default function Watchlist({
     <div className="flex flex-col h-full bg-white border-r border-gray-200">
       {/* 사이드바 헤더 */}
       <div className="p-4 border-b border-gray-200">
-        <h2 className="text-lg font-semibold text-gray-900 mb-3">관심종목</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-3 text-center">관심종목</h2>
         {/* 검색창 */}
         <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />

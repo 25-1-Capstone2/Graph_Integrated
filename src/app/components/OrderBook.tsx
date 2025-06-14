@@ -70,19 +70,22 @@ export default function OrderBook({ code, companyName }: Props) {
 
   return (
     <div className="h-full w-full overflow-hidden border-0 bg-white p-0 m-0">
-      {/* 헤더 */}
-      <div className="pb-1 pt-3 px-0 border-b border-slate-200 bg-white">
-        <h3 className="text-sm font-medium text-slate-700 mb-1 flex items-center gap-2">
-          <Activity className="w-4 h-4 text-emerald-500" />
+      {/* 헤더: 여백만 줄임 */}
+      <div className="pt-0 pb-1 px-0 border-b border-slate-200 bg-white flex flex-col items-center">
+        <h3 className="text-2xl font-bold text-black mb-0 flex items-center gap-2 justify-center text-center">
+          <Activity className="w-6 h-6 text-emerald-500" />
           실시간 호가
         </h3>
-        <div className="text-xs text-gray-400 font-medium">{companyName}</div>
+        <div className="text-lg text-gray-800 font-semibold text-center mt-0">{companyName}</div>
       </div>
       {/* Content */}
       <div className="p-0">
         {error ? (
-          <div className="p-4 text-center text-amber-600 bg-white font-medium border border-amber-100 my-2">
-            {error}
+          <div>
+            <hr className="border-t border-slate-200 w-full" />
+            <div className="p-4 text-center text-amber-600 bg-white font-medium border border-amber-100 my-2">
+              {error}
+            </div>
           </div>
         ) : !orderbook ? (
           <div className="flex items-center justify-center h-36 animate-pulse text-gray-500 bg-white">
