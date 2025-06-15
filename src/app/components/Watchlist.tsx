@@ -155,7 +155,7 @@ export default function Watchlist({
             placeholder="종목명 또는 코드 검색..."
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+            className="w-full pl-10 pr-4 py-2 bg-gray-100 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-400 text-sm text-slate-900 placeholder:text-slate-400 rounded-none"
           />
           {searchQuery && (
             <button

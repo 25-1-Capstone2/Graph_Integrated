@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Layout } from 'plotly.js'
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
   loading: () => <p>📉 RSI 차트 불러오는 중...</p>
@@ -28,7 +31,7 @@ export default function RSIChart({ code, companyName }: Props) {
     const fetchChart = async () => {
       try {
         setLoading(true)
-        const res = await fetch(`http://localhost:8000/chart?code=${code}`)
+        const res = await fetch(`${BASE_URL}/chart?code=${code}`)
         if (!res.ok) throw new Error('RSI 데이터 조회 실패')
         const json = await res.json()
         const filtered = json

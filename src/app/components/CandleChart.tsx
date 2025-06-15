@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Layout } from 'plotly.js'
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
   loading: () => <p>🕯️ 봉차트 불러오는 중...</p>
@@ -31,7 +33,7 @@ export default function CandleChart({ code, companyName }: Props) {
     const fetchData = async () => {
       try {
         setLoading(true)
-        const res = await fetch(`http://localhost:8000/candle?code=${code}`)
+        const res = await fetch(`${BASE_URL}/candle?code=${code}`)
         if (!res.ok) throw new Error('봉차트 데이터 요청 실패')
         const json = await res.json()
         setData(json)

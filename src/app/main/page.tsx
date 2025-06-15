@@ -13,6 +13,9 @@ import CompanySummary from "@/app/components/CompanySummary"
 import MarketSummaryWidget from "@/app/components/MarketSummaryWidget"
 import InvestExpertChat from "@/app/components/InvestExpertChat" // 상단 import 추가
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 import {
   BarChart3,
   Activity,
@@ -35,10 +38,10 @@ type PriceTick = { price: number; diff: number; diff_rate: number } | null
 type Company = { code: string; name: string }
 
 const chartTabs = [
-  { key: "combined", label: "차트", icon: BarChart3, desc: "캔들스틱 + 이동평균선" },
-  { key: "company", label: "기업요약", icon: ChevronRight, desc: "기업 개요/실적" },
-  { key: "market", label: "지수", icon: BarChart3, desc: "주요 지수" },
-  { key: "rsi", label: "RSI", icon: Activity, desc: "상대강도지수" },
+  { key: "combined", label: "차트", icon: BarChart3, desc: "" },
+  { key: "company", label: "기업요약", icon: ChevronRight, desc: "" },
+  { key: "market", label: "지수", icon: BarChart3, desc: "" },
+  { key: "rsi", label: "RSI", icon: Activity, desc: "" },
   { key: "expert", label: "AI", icon: User, desc: "ChatGpt4.1" }, // <-- 추가!
 ]
 
@@ -119,7 +122,7 @@ const Home = () => {
         return
       }
       try {
-        const res = await fetch(`http://localhost:8000/price?code=${selectedStock.code}`)
+        const res = await fetch(`${BASE_URL}/price?code=${selectedStock.code}`)
         if (!res.ok) throw new Error("fetch error")
         const data = await res.json()
         if (isMounted) setSelectedPrice(data)

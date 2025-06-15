@@ -5,6 +5,7 @@ import dynamic from "next/dynamic"
 import { Layout } from "plotly.js"
 import { Loader2, AlertCircle, TrendingUp } from "lucide-react"
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 // 클라이언트 전용 Plotly
 const Plot = dynamic(() => import("react-plotly.js"), {
   ssr: false,
@@ -44,7 +45,7 @@ export default function Company_Chart({ code, companyName }: Props) {
       try {
         setLoading(true)
         setError(null)
-        const res = await fetch(`http://localhost:8000/combined?code=${code}`)
+        const res = await fetch(`${BASE_URL}/combined?code=${code}`)
         if (!res.ok) throw new Error("차트 데이터 조회 실패")
         const json = await res.json()
         setData(json)

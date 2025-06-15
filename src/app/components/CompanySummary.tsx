@@ -4,6 +4,9 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import SummaryTable from "@/app/components/SummaryTable"
 import { Loader2, AlertCircle } from "lucide-react"
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 type Props = { code: string }
 type SummaryData = {
   name: string
@@ -31,7 +34,7 @@ export default function CompanySummary({ code }: Props) {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    fetch(`http://localhost:8000/company-summary?code=${code}`)
+    fetch(`${BASE_URL}/company-summary?code=${code}`)
       .then(r => r.ok ? r.json() : Promise.reject("불러오기 실패"))
       .then(setData)
       .catch(() => setError("기업 요약 정보를 불러오지 못했습니다."))
