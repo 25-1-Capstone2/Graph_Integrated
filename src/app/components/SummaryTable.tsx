@@ -21,6 +21,7 @@ type SummaryRow = {
 }
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE || "http://localhost:8000"
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 const formatNumber = (num: number) => {
   if (num >= 1_0000_0000) return `${(num / 1_0000_0000).toFixed(2)}억`
@@ -35,7 +36,7 @@ export default function SummaryTable({ code, days = 3 }: Props) {
   useEffect(() => {
     if (!code) return
     setLoading(true)
-    fetch(`${API_BASE}/summary?code=${code}&days=${days}`)
+    fetch(`${BASE_URL}/summary?code=${code}&days=${days}`)
       .then(res => res.json())
       .then(data => setData(data))
       .catch(() => setData([]))

@@ -1,8 +1,11 @@
 "use client"
 import { useEffect, useState } from "react"
-import { Card, CardContent } from "../components/ui/card"
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from "recharts"
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
+import SummaryTable from "@/app/components/SummaryTable"
 import { Loader2, AlertCircle } from "lucide-react"
+
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 type Props = { code: string }
 type SummaryData = {
@@ -16,6 +19,11 @@ type SummaryData = {
   recentOpProfit: number
   recentNetProfit: number
   revenueSeries: { year: string, revenue: number, op: number, net: number }[]
+  per?: string
+  pbr?: string
+  dividendYield?: string
+  founded?: string
+  fiscal?: string
 }
 
 export default function CompanySummary({ code }: Props) {
@@ -26,7 +34,7 @@ export default function CompanySummary({ code }: Props) {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    fetch(`http://localhost:8000/company-summary?code=${code}`)
+    fetch(`${BASE_URL}/company-summary?code=${code}`)
       .then(r => r.ok ? r.json() : Promise.reject("불러오기 실패"))
       .then(setData)
       .catch(() => setError("기업 요약 정보를 불러오지 못했습니다."))
@@ -35,30 +43,27 @@ export default function CompanySummary({ code }: Props) {
 
   if (loading) {
     return (
-      <Card className="my-4 border-0 shadow bg-gradient-to-br from-white to-slate-50 rounded-2xl">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Loader2 className="animate-spin text-blue-500 w-8 h-8 mb-2" />
-          <span className="text-gray-600">기업 요약 불러오는 중...</span>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center py-12 w-full h-full">
+        <Loader2 className="animate-spin text-blue-500 w-8 h-8 mb-2" />
+        <span className="text-gray-600">기업 요약 불러오는 중...</span>
+      </div>
     )
   }
   if (error || !data) {
     return (
-      <Card className="my-4 border-0 shadow bg-gradient-to-br from-white to-slate-50 rounded-2xl">
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <AlertCircle className="text-red-500 w-8 h-8 mb-2" />
-          <span className="text-red-700">{error || "정보 없음"}</span>
-        </CardContent>
-      </Card>
+      <div className="flex flex-col items-center justify-center py-12 w-full h-full">
+        <AlertCircle className="text-red-500 w-8 h-8 mb-2" />
+        <span className="text-red-700">{error || "정보 없음"}</span>
+      </div>
     )
   }
+
   return (
-    <Card className="my-4 border-0 shadow bg-gradient-to-br from-white to-slate-50 rounded-2xl">
-      <CardContent className="p-6">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* 기업 개요 */}
-          <div className="flex-1 min-w-[220px]">
+    <div className="w-full h-full px-2 py-2">
+      <div className="flex flex-row gap-10 items-start">
+        {/* --- 왼쪽(정보+SummaryTable) --- */}
+        <div className="flex flex-col justify-start" style={{ minWidth: 320, flex: 1 }}>
+          <div>
             <h3 className="text-lg font-semibold mb-3">{data.name} <span className="text-xs font-normal text-gray-400">({code})</span></h3>
             <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
               <span className="text-gray-500">시가총액</span>
@@ -67,26 +72,97 @@ export default function CompanySummary({ code }: Props) {
               <span className="font-medium">{data.stocks}</span>
               <span className="text-gray-500">외국인비율</span>
               <span className="font-medium">{data.foreignRate}</span>
+              {data.per && <>
+                <span className="text-gray-500">PER</span>
+                <span className="font-medium">{data.per}</span>
+              </>}
+              {data.pbr && <>
+                <span className="text-gray-500">PBR</span>
+                <span className="font-medium">{data.pbr}</span>
+              </>}
+              {data.dividendYield && <>
+                <span className="text-gray-500">배당수익률</span>
+                <span className="font-medium">{data.dividendYield}</span>
+              </>}
+              {data.founded && <>
+                <span className="text-gray-500">설립연도</span>
+                <span className="font-medium">{data.founded}</span>
+              </>}
+              {data.fiscal && <>
+                <span className="text-gray-500">결산기준</span>
+                <span className="font-medium">{data.fiscal}</span>
+              </>}
             </div>
           </div>
-          {/* 연간 실적 차트 */}
-          <div className="flex-1 min-w-[250px]">
-            <h4 className="font-semibold mb-1">연간 실적 추이</h4>
-            <ResponsiveContainer width="100%" height={160}>
+          <div className="mt-8">
+            <SummaryTable code={code} days={3} />
+          </div>
+        </div>
+        {/* --- 오른쪽(차트 묶음) --- */}
+        <div className="flex-1 min-w-[420px] flex flex-col gap-2 mt-1">
+          {/* gap-2: 차트 간격 좁게, mt-1: 위에서 약간 내림 */}
+          <div>
+            <h4 className="text-base font-semibold mb-1" style={{ marginLeft: "2px" }}>매출액</h4>
+            <ResponsiveContainer width="100%" height={110}>
               <LineChart data={data.revenueSeries}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="year" fontSize={12} />
-                <YAxis fontSize={12} />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="year" fontSize={12} tick={{ fontSize: 11 }} />
+                <YAxis fontSize={12} tick={{ fontSize: 11 }} />
                 <Tooltip />
-                <Legend />
-                <Line type="monotone" dataKey="revenue" name="매출액" stroke="#1d4ed8" />
-                <Line type="monotone" dataKey="op" name="영업이익" stroke="#22c55e" />
-                <Line type="monotone" dataKey="net" name="순이익" stroke="#ef4444" />
+                <Line
+                  type="monotone"
+                  dataKey="revenue"
+                  stroke="#6366f1"
+                  strokeWidth={2}
+                  dot={{ r: 2.3 }}
+                  activeDot={{ r: 4 }}
+                  name="매출액"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <h4 className="text-base font-semibold mb-1" style={{ marginLeft: "2px" }}>영업이익</h4>
+            <ResponsiveContainer width="100%" height={110}>
+              <LineChart data={data.revenueSeries}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="year" fontSize={12} tick={{ fontSize: 11 }} />
+                <YAxis fontSize={12} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="op"
+                  stroke="#22c55e"
+                  strokeWidth={2}
+                  dot={{ r: 2.3 }}
+                  activeDot={{ r: 4 }}
+                  name="영업이익"
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+          <div>
+            <h4 className="text-base font-semibold mb-1" style={{ marginLeft: "2px" }}>순이익</h4>
+            <ResponsiveContainer width="100%" height={110}>
+              <LineChart data={data.revenueSeries}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="year" fontSize={12} tick={{ fontSize: 11 }} />
+                <YAxis fontSize={12} tick={{ fontSize: 11 }} />
+                <Tooltip />
+                <Line
+                  type="monotone"
+                  dataKey="net"
+                  stroke="#fbbf24"
+                  strokeWidth={2}
+                  dot={{ r: 2.3 }}
+                  activeDot={{ r: 4 }}
+                  name="순이익"
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }

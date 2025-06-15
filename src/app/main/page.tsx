@@ -11,6 +11,11 @@ import OrderBook from "@/app/components/OrderBook"
 import SummaryTable from "@/app/components/SummaryTable"
 import CompanySummary from "@/app/components/CompanySummary"
 import MarketSummaryWidget from "@/app/components/MarketSummaryWidget"
+import InvestExpertChat from "@/app/components/InvestExpertChat" // 상단 import 추가
+
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 import {
   BarChart3,
   Activity,
@@ -34,13 +39,15 @@ type PriceTick = { price: number; diff: number; diff_rate: number } | null
 type Company = { code: string; name: string }
 
 const chartTabs = [
-  { key: "combined", label: "차트", icon: BarChart3, desc: "캔들스틱 + 이동평균선" },
-  { key: "company", label: "기업요약", icon: ChevronRight, desc: "기업 개요/실적" },
-  { key: "market", label: "지수", icon: BarChart3, desc: "주요 지수·환율" },
-  { key: "rsi", label: "RSI", icon: Activity, desc: "상대강도지수" },
+  { key: "combined", label: "차트", icon: BarChart3, desc: "" },
+  { key: "company", label: "기업요약", icon: ChevronRight, desc: "" },
+  { key: "market", label: "지수", icon: BarChart3, desc: "" },
+  { key: "rsi", label: "RSI", icon: Activity, desc: "" },
+  { key: "expert", label: "AI", icon: User, desc: "ChatGpt4.1" }, // <-- 추가!
 ]
 
 const HEADER_HEIGHT = "h-20" // 80px
+const SEARCH_MARGIN_LEFT = 450 // px
 
 const Home = () => {
   const [user, setUser] = useState<any>(null)
@@ -116,7 +123,7 @@ const Home = () => {
         return
       }
       try {
-        const res = await fetch(`http://localhost:8000/price?code=${selectedStock.code}`)
+        const res = await fetch(`${BASE_URL}/price?code=${selectedStock.code}`)
         if (!res.ok) throw new Error("fetch error")
         const data = await res.json()
         if (isMounted) setSelectedPrice(data)
@@ -164,22 +171,19 @@ const Home = () => {
       return <RSIChart code={selectedStock.code} companyName={selectedStock.name} />
     }
     if (selectedTab === "market") {
-      // <div className="flex justify-center items-center h-full w-full">
-      //   <MarketSummaryWidget />
-      // </div>
-      // **위 코드 대신 바로 컴포넌트만 반환**
       return <MarketSummaryWidget />
+    }
+    if (selectedTab === "expert") {
+    return <InvestExpertChat />
     }
     return null
   }
 
   if (!user) return null
-
   return (
     <div className="flex h-screen bg-white text-slate-900 relative overflow-hidden">
       {/* Left sidebar - Watchlist */}
       <div className="w-80 bg-white flex flex-col">
-        {/* 사이드바 로고 헤더 */}
         <div className={`flex items-center gap-3 px-4 border-b border-slate-200 bg-white ${HEADER_HEIGHT}`}>
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 flex items-center justify-center border border-emerald-400/20 rounded-none">
             <TrendingUp className="w-6 h-6 text-white" />
@@ -235,9 +239,10 @@ const Home = () => {
       <div className="flex-1 flex flex-col bg-white">
         {/* 메인 헤더 */}
         <div className={`border-b border-slate-200 bg-white flex items-center justify-between px-8 z-10 ${HEADER_HEIGHT}`}>
-          {/* 중앙 검색 */}
-          <div className="flex-1 flex items-center" ref={searchWrapperRef}
-            style={{ marginLeft: "350px" }}
+          <div
+            className="flex-1 flex items-center"
+            ref={searchWrapperRef}
+            style={{ marginLeft: `${SEARCH_MARGIN_LEFT}px` }}
           >
             <div className="relative w-full max-w-lg">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none" />
@@ -273,6 +278,7 @@ const Home = () => {
             </div>
           </div>
           <div className="flex items-center gap-3 ml-6">
+{/* <<<<<<< HEAD
             <Button
               variant="ghost"
               size="icon"
@@ -288,15 +294,22 @@ const Home = () => {
               onClick={() => router.push("/predict")}
             >
               <BrainCircuit className="h-5 w-5" />
+======= */}
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
+              <Bell className="h-5 h-5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
+              <Settings className="h-5 h-5" />
             </Button>
           </div>
         </div>
 
         {/* Main content with charts */}
         <div className="flex-1 flex overflow-hidden">
-          <div className="flex-1 flex flex-col p-6 overflow-y-auto">
+          {/* 상단 패딩만 줄이고 하단은 유지 */}
+          <div className="flex-1 flex flex-col pt-3 pb-11 px-11 overflow-y-auto border-none">
             {selectedStock.code && (
-              <Card className="mb-7 bg-white border-none rounded-none">
+            <><hr className="border-t border-gray-200" /><Card className="mb-4 bg-white border-none rounded-none">
                 <CardContent className="p-7 flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="w-14 h-14 bg-emerald-100 flex items-center justify-center border border-emerald-200 rounded-none">
@@ -311,16 +324,12 @@ const Home = () => {
                     {priceInfo ? (
                       <>
                         <div
-                          className={`text-3xl font-black leading-tight ${
-                            isZero ? "text-slate-400" : isPositive ? "text-red-500" : "text-blue-500"
-                          }`}
+                          className={`text-3xl font-black leading-tight ${isZero ? "text-slate-400" : isPositive ? "text-red-500" : "text-blue-500"}`}
                         >
                           {priceInfo.price.toLocaleString()}원
                         </div>
                         <div
-                          className={`text-lg flex items-center justify-end gap-1 ${
-                            isZero ? "text-slate-400" : isPositive ? "text-red-500" : "text-blue-500"
-                          }`}
+                          className={`text-lg flex items-center justify-end gap-1 ${isZero ? "text-slate-400" : isPositive ? "text-red-500" : "text-blue-500"}`}
                         >
                           {isPositive ? <TrendingUp className="w-5 h-5" /> : isZero ? null : <TrendingDown className="w-5 h-5" />}
                           {isPositive ? "+" : isZero ? "" : ""}
@@ -335,11 +344,10 @@ const Home = () => {
                     )}
                   </div>
                 </CardContent>
-              </Card>
+              </Card></>
             )}
 
             <div className="mb-6">
-              {/* 차트/기업요약/지수/RSI 탭 */}
               <div className="flex gap-2 p-1 bg-white border border-slate-200 rounded-none">
                 {chartTabs.map((tab) => {
                   const IconComponent = tab.icon
@@ -368,8 +376,6 @@ const Home = () => {
                 })}
               </div>
             </div>
-
-            {/* ▶▶▶ 여기 카드(외부 border)만 없앴음! */}
             <Card className="flex-1 bg-white border-none mb-7 rounded-none">
               <CardContent className="p-6 h-full">
                 <div className="h-full w-full overflow-hidden bg-white rounded-none">
@@ -380,13 +386,11 @@ const Home = () => {
           </div>
 
           {/* Right sidebar - Order book & Summary */}
-          <div className="w-80 border-l border-slate-200 bg-white py-4 px-2 flex flex-col gap-4 overflow-y-auto">
+          <div className="w-80 border-l border-slate-200 bg-white py-3 px-2 flex flex-col gap-4 overflow-y-auto">
             {selectedStock.code ? (
               <>
                 <OrderBook code={selectedStock.code} companyName={selectedStock.name} />
-                {/* Divider 추가 */}
-                <hr className="my-2 border-t border-gray-200" />
-                <SummaryTable code={selectedStock.code} days={3} />
+                <hr className="my-7 border-t border-gray-200" />
               </>
             ) : (
               <div className="h-full flex flex-col items-center justify-center text-slate-400 text-center p-6">

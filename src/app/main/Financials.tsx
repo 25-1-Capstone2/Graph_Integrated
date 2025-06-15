@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from 'react'
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 type Props = {
   companyName: string
   setCompanyName: (name: string) => void
@@ -34,7 +37,7 @@ export default function Financial({
 
   const fetchCode = async (name: string) => {
     try {
-      const res = await fetch(`http://localhost:8000/code?name=${encodeURIComponent(name)}`)
+      const res = await fetch(`${BASE_URL}/code?name=${encodeURIComponent(name)}`)
       const data = await res.json()
       if (data.code && data.code !== 'NOT_FOUND') {
         setCode(data.code)
@@ -51,7 +54,7 @@ export default function Financial({
   const fetchSummary = async (stockCode: string) => {
     try {
       setLoading(true)
-      const res = await fetch(`http://localhost:8000/summary?code=${stockCode}&days=${days}`)
+      const res = await fetch(`${BASE_URL}/summary?code=${stockCode}&days=${days}`)
       if (!res.ok) throw new Error('시세 요약 요청 실패')
       const data = await res.json()
       setSummary(data)

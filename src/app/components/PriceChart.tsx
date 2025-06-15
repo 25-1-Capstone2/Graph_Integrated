@@ -4,6 +4,9 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Layout } from 'plotly.js'
 
+
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
   loading: () => <p>💹 실시간 시세 불러오는 중...</p>
@@ -30,7 +33,7 @@ export default function RealtimePriceChart({ code, companyName }: Props) {
 
    const fetchPrice = async () => {
   try {
-    const res = await fetch(`http://localhost:8000/price?code=${code}`)
+    const res = await fetch(`${BASE_URL}/price?code=${code}`)
     if (!res.ok) throw new Error('시세 조회 실패')
     const json = await res.json()
     if (!json.price || !json.time) throw new Error('시세 데이터 없음')

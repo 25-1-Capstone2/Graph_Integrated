@@ -4,13 +4,12 @@ import React, { useEffect, useState } from "react";
 import 'chart.js/auto';
 import { Line } from "react-chartjs-2";
 
-// ----- 타입 정의 -----
 type MarketSummary = {
-  key: string;         // "kospi", "kosdaq", "nasdaq", "usdkrw"
-  name: string;        // "코스피", "코스닥", "나스닥", "달러/원"
-  value: string;       // 2,900.99 등
-  changeValue: string; // +10.5, -8.2 (앞뒤공백 있을수있음)
-  changeRate: string;  // +0.36%, -0.45%
+  key: string;
+  name: string;
+  value: string;
+  changeValue: string;
+  changeRate: string;
 };
 
 type ChartPoint = {
@@ -22,10 +21,9 @@ const INDEXES = [
   { key: "kospi", label: "코스피" },
   { key: "kosdaq", label: "코스닥" },
   { key: "nasdaq", label: "나스닥" },
-  { key: "usdkrw", label: "달러/원" },
+  { key: "sp500", label: "S&P500" },
 ];
 
-// 컬러 유틸
 const getColor = (changeValue: string) => {
   const v = changeValue.trim();
   if (v.startsWith("+")) return "text-red-500";
@@ -36,8 +34,14 @@ const getChartColor = (changeValue: string, key: string) => {
   const v = changeValue.trim();
   if (v.startsWith("+")) return "#ef4444";
   if (v.startsWith("-")) return "#2563eb";
+  // 나머지 색상은 원하는 대로 추가 가능
   if (key === "nasdaq") return "#10b981";
   if (key === "usdkrw") return "#6366f1";
+  if (key === "sp500") return "#6366f1";
+  if (key === "dji") return "#f59e42";
+  if (key === "jpkrw") return "#6366f1";
+  if (key === "cnykrw") return "#fb7185";
+  if (key === "eurkrw") return "#64748b";
   return "#a3a3a3";
 };
 
@@ -47,7 +51,6 @@ export default function MarketSummaryWidget() {
   const [chartData, setChartData] = useState<ChartPoint[]>([]);
   const [loading, setLoading] = useState(false);
 
-  // 요약 데이터 fetch
   useEffect(() => {
     fetch("/api/market-summary")
       .then(res => res.json())
@@ -55,7 +58,6 @@ export default function MarketSummaryWidget() {
       .catch(() => setSummaries([]));
   }, []);
 
-  // 선택한 지수의 시계열 데이터 fetch
   useEffect(() => {
     setLoading(true);
     fetch(`/api/market-trend?type=${selected}`)
@@ -64,7 +66,6 @@ export default function MarketSummaryWidget() {
       .finally(() => setLoading(false));
   }, [selected]);
 
-  // 차트 옵션
   const selectedSummary = summaries.find(s => s.key === selected);
   const selectedColor = selectedSummary
     ? getChartColor(selectedSummary.changeValue, selected)
@@ -87,7 +88,6 @@ export default function MarketSummaryWidget() {
     plugins: { legend: { display: false } }
   };
 
-  // 차트 데이터
   const lineData = {
     labels: chartData.map(d => d.time),
     datasets: [
@@ -105,7 +105,6 @@ export default function MarketSummaryWidget() {
 
   return (
     <div className="flex w-full items-start py-2 px-1 bg-transparent">
-      {/* 좌측: 인덱스 선택 카드 */}
       <div className="flex flex-col gap-3 pr-8 pt-2 min-w-[180px]">
         {INDEXES.map(idx => {
           const s = summaries.find(s => s.key === idx.key);
@@ -138,7 +137,6 @@ export default function MarketSummaryWidget() {
           );
         })}
       </div>
-      {/* 우측: 차트 */}
       <div className="flex-1 flex flex-col justify-center items-center">
         <div className="text-2xl font-bold mb-3">
           {INDEXES.find(idx => idx.key === selected)?.label} 추이

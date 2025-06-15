@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react'
 import dynamic from 'next/dynamic'
 import { Layout } from 'plotly.js'
 
+const BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+
 // ✅ Plotly를 클라이언트에서만 로딩하도록 동적 import
 const Plot = dynamic(() => import('react-plotly.js'), {
   ssr: false,
@@ -33,7 +35,7 @@ export default function MaChart({ code, companyName }: Props) {
     const fetchChart = async () => {
       try {
         setLoading(true)
-        const res = await fetch(`http://localhost:8000/chart?code=${code}`)
+        const res = await fetch(`${BASE_URL}/chart?code=${code}`)
         if (!res.ok) throw new Error('차트 데이터 조회 실패')
         const json = await res.json()
         setData(json)
