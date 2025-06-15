@@ -278,7 +278,6 @@ const Home = () => {
             </div>
           </div>
           <div className="flex items-center gap-3 ml-6">
-{/* <<<<<<< HEAD
             <Button
               variant="ghost"
               size="icon"
@@ -294,12 +293,6 @@ const Home = () => {
               onClick={() => router.push("/predict")}
             >
               <BrainCircuit className="h-5 w-5" />
-======= */}
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
-              <Bell className="h-5 h-5" />
-            </Button>
-            <Button variant="ghost" size="icon" className="text-slate-400 hover:text-emerald-400 rounded-none">
-              <Settings className="h-5 h-5" />
             </Button>
           </div>
         </div>

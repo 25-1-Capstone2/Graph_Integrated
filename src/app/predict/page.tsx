@@ -89,10 +89,9 @@ const PredictModelPage = () => {
   if (!user) return null
 
   return (
-    <div className="flex flex-col md:flex-row h-screen bg-white text-slate-900">
-      {/* 왼쪽 사이드바 - Watchlist */}
-      <aside className="w-full md:w-80 bg-white border-b md:border-b-0 md:border-r border-slate-200 flex flex-col">
-        {/* 사이드바 로고 헤더 */}
+    <div className="flex h-screen bg-white text-slate-900 relative overflow-hidden">
+      {/* Left sidebar - Watchlist */}
+      <div className="w-80 bg-white flex flex-col">
         <div className={`flex items-center gap-3 px-4 border-b border-slate-200 bg-white ${HEADER_HEIGHT}`}>
           <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 via-emerald-500 to-emerald-600 flex items-center justify-center border border-emerald-400/20 rounded-none">
             <TrendingUp className="w-6 h-6 text-white" />
@@ -104,7 +103,7 @@ const PredictModelPage = () => {
             <p className="text-xs text-slate-400">스마트한 투자의 시작</p>
           </div>
         </div>
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden bg-white">
           <Watchlist
             selectedStock={selectedStock}
             onStockSelect={setSelectedStock}
@@ -142,7 +141,7 @@ const PredictModelPage = () => {
             </TooltipProvider>
           </div>
         </div>
-      </aside>
+      </div>
 
       {/* 메인 콘텐츠 */}
       <main className="flex-1 flex flex-col bg-white">
